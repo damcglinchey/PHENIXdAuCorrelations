@@ -1,0 +1,8 @@
+#ignore pdfs and rootfiles
+*.pdf
+*.root
+
+#ignore build files
+*.d
+*.so
+*.pcm
