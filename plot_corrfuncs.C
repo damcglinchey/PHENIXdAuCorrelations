@@ -30,6 +30,7 @@ void plot_corrfuncs()
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
+  gStyle->SetErrorX(0);
   //==========================================================================//
   // SET RUNNING CONDITIONS
   //==========================================================================//
@@ -38,9 +39,12 @@ void plot_corrfuncs()
   const int NC  =  6; // number of centrality bins
   const int NZ  = 10; // number of z bins
   const int NPT =  7; // number of pT bins
-  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu200.root";
-  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu200_0000454933.root";
-  int energy = 200;
+  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu200.root";
+  // int energy = 200;
+  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu62.root";
+  int energy = 62;
+  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
+  // int energy = 39;
 
   float ptl[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 3.00};
   float pth[] = {0.50, 0.75, 1.00, 1.50, 2.00, 3.00, 5.00};
@@ -68,7 +72,7 @@ void plot_corrfuncs()
 
 
   // Rebin value
-  const int REBIN = 4;
+  const int REBIN = 6;
 
   const int NPAR = 5; // number of orders in the fourier fit
   int fitColor[NPAR] = {kBlue, kRed, kGreen + 2, kMagenta + 2, kYellow + 2};
@@ -104,8 +108,15 @@ void plot_corrfuncs()
 
   // pT dependent cn's
   double cn_pt[NCORRPT][NC][NPT][NPAR];
+  double cn_pt_e[NCORRPT][NC][NPT][NPAR];
   // pT integrated cn's
   double cn[NCORR][NC][NPAR];
+  double cn_e[NCORR][NC][NPAR];
+
+
+  //-- cn graphs
+  TGraphErrors *gcn_pt[NCORRPT][NC][NPAR];
+  TGraphErrors *gcn[NCORR][NPAR];
 
   //-- temp stuff
   char hname[500];
@@ -346,6 +357,7 @@ void plot_corrfuncs()
       dphi_corr[icorr][ic] =
         (TH1D*) dphi_FGsum[icorr][ic]->Clone(
           Form("dphi_corr_%i_%i", icorr, ic));
+      dphi_corr[icorr][ic]->Sumw2();
       dphi_corr[icorr][ic]->SetDirectory(0);
       dphi_corr[icorr][ic]->Divide(dphi_BGsum[icorr][ic]);
       dphi_corr[icorr][ic]->Scale(
@@ -357,7 +369,11 @@ void plot_corrfuncs()
   } // icorr
 
 
-
+  //==========================================================================//
+  // MAKE GRAPHS OF CORRELATION COEFFICIENTS
+  //==========================================================================//
+  cout << endl;
+  cout << "--> Making Graphs of correlation coefficients" << endl;
 
 
 
@@ -379,7 +395,10 @@ void plot_corrfuncs()
         {
           dphi_corr_pt[icorr][ic][ipt]->Fit(fcorr, "RQ0N");
           for (int i = 0; i < NPAR; i++)
+          {
             cn_pt[icorr][ic][ipt][i] = fcorr->GetParameter(i);
+            cn_pt_e[icorr][ic][ipt][i] = fcorr->GetParError(i);
+          }
         } // ipt
       }
 
@@ -387,7 +406,10 @@ void plot_corrfuncs()
 
       dphi_corr[icorr][ic]->Fit(fcorr, "RQ0N");
       for (int i = 0; i < NPAR; i++)
+      {
         cn[icorr][ic][i] = fcorr->GetParameter(i);
+        cn_e[icorr][ic][i] = fcorr->GetParError(i);
+      }
 
     } // ic
   } // icorr
@@ -409,6 +431,12 @@ void plot_corrfuncs()
   TLine l1;
   l1.SetLineStyle(2);
 
+  TLatex le;
+  le.SetNDC();
+
+  TLatex lc;
+  lc.SetNDC();
+  lc.SetTextAlign(31);
 
   //==========================================================================//
   // PLOT
@@ -450,6 +478,9 @@ void plot_corrfuncs()
                   cCorr[icorr],
                   ptl[ipt], pth[ipt], cl[ic], ch[ic]);
           ltitle.DrawLatex(0.5, 0.95, ctitle);
+
+          if (ic == 0)
+            le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
         } // ic
 
         //correlation
@@ -465,6 +496,24 @@ void plot_corrfuncs()
           ccorrpt[icorr][ipt]->GetPad(ic + 1)->SetTicks(1, 1);
 
           ccorrpt[icorr][ipt]->cd(ic + 1);
+
+          //set the scale
+          for (int i = 0; i < NPAR; i++)
+          {
+            if (i == 0)
+              fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i]);
+            else
+              fcorr->SetParameter(i, 0);
+          }
+          double min = fcorr->GetMinimum(-1, 1);
+          double max = dphi_corr_pt[icorr][ic][ipt]->GetMaximum();
+
+          dphi_corr_pt[icorr][ic][ipt]->GetYaxis()->SetRangeUser(
+            (min - 0.1 * (1 - min)),
+            (max + 0.1 * (max - 1)));
+
+
+          // Draw
           dphi_corr_pt[icorr][ic][ipt]->Draw("P");
 
           sprintf(ctitle, "%s %.2f<pT<%.2f %i-%i%%",
@@ -474,6 +523,9 @@ void plot_corrfuncs()
           ltitle.DrawLatex(0.5, 0.95, ctitle);
 
           l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
+
+          if (ic == 0)
+            le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
 
           // plot fit
           fcorr->SetLineColor(kBlack);
@@ -493,6 +545,7 @@ void plot_corrfuncs()
             }
             fcorr->DrawCopy("same");
           }
+
         } // ic
 
       } // ipt
@@ -524,6 +577,9 @@ void plot_corrfuncs()
               cCorr[icorr],
               cl[ic], ch[ic]);
       ltitle.DrawLatex(0.5, 0.95, ctitle);
+
+      if (ic == 0)
+        le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
     } // ic
 
     //correlation
@@ -539,6 +595,24 @@ void plot_corrfuncs()
       ccorr[icorr]->GetPad(ic + 1)->SetTicks(1, 1);
 
       ccorr[icorr]->cd(ic + 1);
+
+      //set the scale
+      for (int i = 0; i < NPAR; i++)
+      {
+        if (i == 0)
+          fcorr->SetParameter(i, cn[icorr][ic][i]);
+        else
+          fcorr->SetParameter(i, 0);
+      }
+      double min = fcorr->GetMinimum(-1, 1);
+      double max = dphi_corr[icorr][ic]->GetMaximum();
+
+      dphi_corr[icorr][ic]->GetYaxis()->SetRangeUser(
+        (min - 0.1 * (1 - min)),
+        (max + 0.1 * (max - 1)));
+
+
+      // Draw
       dphi_corr[icorr][ic]->Draw("P");
 
       sprintf(ctitle, "%s %i-%i%%",
@@ -547,6 +621,9 @@ void plot_corrfuncs()
       ltitle.DrawLatex(0.5, 0.95, ctitle);
 
       l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
+
+      if (ic == 0)
+        le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
 
       // plot fit
       fcorr->SetLineColor(kBlack);
@@ -566,6 +643,18 @@ void plot_corrfuncs()
         }
         fcorr->DrawCopy("same");
       }
+
+      lc.SetTextColor(fitColor[0]);
+      lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
+                                   cn[icorr][ic][0]));
+      lc.SetTextColor(fitColor[1]);
+      lc.DrawLatex(0.45, 0.64, Form("C_{2} = % .4f",
+                                   cn[icorr][ic][1]));
+      lc.SetTextColor(kBlack);
+      lc.DrawLatex(0.45, 0.58, Form("C_{2}/C_{1} = % .4f",
+                                   cn[icorr][ic][1] / cn[icorr][ic][0]));
+
+
     } // ic
 
   } // icorr
@@ -590,19 +679,19 @@ void plot_corrfuncs()
       {
         for (int ipt = 0; ipt < NPT; ipt++)
         {
-          sprintf(cname, "pdfs/%s_FGBG_pt%i.pdf", cCorr[icorr], ipt);
+          sprintf(cname, "pdfs/dAu%i_%s_FGBG_pt%i.pdf", energy, cCorr[icorr], ipt);
           cFGBGpt[icorr][ipt]->Print(cname);
 
-          sprintf(cname, "pdfs/%s_corr_pt%i.pdf", cCorr[icorr], ipt);
+          sprintf(cname, "pdfs/dAu%i_%s_corr_pt%i.pdf", energy, cCorr[icorr], ipt);
           ccorrpt[icorr][ipt]->Print(cname);
         }
       }
 
       //-- pT integrated
-      sprintf(cname, "pdfs/%s_FGBG.pdf", cCorr[icorr]);
+      sprintf(cname, "pdfs/dAu%i_%s_FGBG.pdf", energy, cCorr[icorr]);
       cFGBG[icorr]->Print(cname);
 
-      sprintf(cname, "pdfs/%s_corr.pdf", cCorr[icorr]);
+      sprintf(cname, "pdfs/dAu%i_%s_corr.pdf", energy, cCorr[icorr]);
       ccorr[icorr]->Print(cname);
 
     } // icorr
