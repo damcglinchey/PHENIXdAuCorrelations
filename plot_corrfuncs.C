@@ -44,10 +44,10 @@ void plot_corrfuncs()
   // int energy = 200;
   // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu62.root";
   // int energy = 62;
-  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
-  // int energy = 39;
-  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu20.root";
-  int energy = 20;
+  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
+  int energy = 39;
+  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu20.root";
+  // int energy = 20;
 
   float ptl[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 3.00};
   float pth[] = {0.50, 0.75, 1.00, 1.50, 2.00, 3.00, 5.00};
@@ -55,6 +55,11 @@ void plot_corrfuncs()
   int ch[] = {5, 10, 20, 40, 60, 100};
   // float ptl[] = {0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00};
   // float pth[] = {0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 5.00};
+
+  int ptsuml = 3;
+  int ptsumh = 5;
+  // int ptsuml = 0;
+  // int ptsumh = NPT - 1;
 
   bool printPlots = true;
 
@@ -140,9 +145,13 @@ void plot_corrfuncs()
 
 
   //-- v2
-  double v2_cent[NC];
-  double v2_e_cent[NC];
-  TGraphErrors *gv2_cent;
+  double vn_cent[NC][2];
+  double vn_e_cent[NC][2];
+  TGraphErrors *gvn_cent[2];
+
+  double vn_pT[NC][2][NPT];
+  double vn_e_pT[NC][2][NPT];
+  TGraphErrors *gvn_pT[NC][2];
 
   //-- temp stuff
   char hname[500];
@@ -205,6 +214,7 @@ void plot_corrfuncs()
           dphi_FG12_pt[icorr][iz][ic][ipt]->SetName(hname);
           dphi_FG12_pt[icorr][iz][ic][ipt]->SetLineColor(kBlue);
           dphi_FG12_pt[icorr][iz][ic][ipt]->SetLineWidth(2);
+          dphi_FG12_pt[icorr][iz][ic][ipt]->Sumw2();
           dphi_FG12_pt[icorr][iz][ic][ipt]->Rebin(REBIN);
 
 
@@ -228,6 +238,7 @@ void plot_corrfuncs()
                   "dphi_BG12_pt_%s_%i_%i_%i", cCorr[icorr], iz, ic, ipt);
           dphi_BG12_pt[icorr][iz][ic][ipt]->SetName(hname);
           dphi_BG12_pt[icorr][iz][ic][ipt]->SetLineColor(kRed);
+          dphi_BG12_pt[icorr][iz][ic][ipt]->Sumw2();
           dphi_BG12_pt[icorr][iz][ic][ipt]->Rebin(REBIN);
 
 
@@ -254,7 +265,7 @@ void plot_corrfuncs()
 
 
           //-- sum the FG & BG (pT integrated)
-          if (iz == 0 && ipt == 0)
+          if (iz == 0 && ipt == ptsuml)
           {
             // pT dependent sums
             dphi_FGsum[icorr][ic] =
@@ -268,7 +279,7 @@ void plot_corrfuncs()
             dphi_BGsum[icorr][ic]->SetDirectory(0);
 
           }
-          else
+          if (ipt > ptsuml && ipt <= ptsumh && iz > 0)
           {
             dphi_FGsum[icorr][ic]->Add(dphi_FG12_pt[icorr][iz][ic][ipt]);
             dphi_BGsum[icorr][ic]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
@@ -298,6 +309,7 @@ void plot_corrfuncs()
         dphi_FG12[icorr][iz][ic]->SetName(hname);
         dphi_FG12[icorr][iz][ic]->SetLineColor(kBlue);
         dphi_FG12[icorr][iz][ic]->SetLineWidth(2);
+        dphi_FG12[icorr][iz][ic]->Sumw2();
         dphi_FG12[icorr][iz][ic]->Rebin(REBIN);
 
 
@@ -314,6 +326,7 @@ void plot_corrfuncs()
         sprintf(hname, "dphi_BG12_%s_%i_%i", cCorr[icorr], ic, iz);
         dphi_BG12[icorr][iz][ic]->SetName(hname);
         dphi_BG12[icorr][iz][ic]->SetLineColor(kRed);
+        dphi_BG12[icorr][iz][ic]->Sumw2();
         dphi_BG12[icorr][iz][ic]->Rebin(REBIN);
 
 
@@ -363,7 +376,7 @@ void plot_corrfuncs()
       {
         for (int ipt = 0; ipt < NPT; ipt++)
         {
-          cout << " icorr:" << icorr << " ic:" << ic << " ipt:" << ipt << endl;
+          // cout << " icorr:" << icorr << " ic:" << ic << " ipt:" << ipt << endl;
 
           dphi_corr_pt[icorr][ic][ipt] =
             (TH1D*) dphi_FGsum_pt[icorr][ic][ipt]->Clone(
@@ -379,11 +392,10 @@ void plot_corrfuncs()
 
 
       // pT integrated
-      cout << " icorr:" << icorr << " ic:" << ic << endl;
+      // cout << " icorr:" << icorr << " ic:" << ic << endl;
       dphi_corr[icorr][ic] =
         (TH1D*) dphi_FGsum[icorr][ic]->Clone(
           Form("dphi_corr_%i_%i", icorr, ic));
-      dphi_corr[icorr][ic]->Sumw2();
       dphi_corr[icorr][ic]->SetDirectory(0);
       dphi_corr[icorr][ic]->Divide(dphi_BGsum[icorr][ic]);
       dphi_corr[icorr][ic]->Scale(
@@ -528,43 +540,94 @@ void plot_corrfuncs()
   cout << endl;
   cout << "--> Calcualte v2 using 3 sub-event method" << endl;
 
-  //CNT-FVTXN-FVTXS
-  gv2_cent = new TGraphErrors();
-  gv2_cent->SetMarkerStyle(20);
-  gv2_cent->SetMarkerColor(kBlue);
-  gv2_cent->SetLineColor(kBlue);
-  gv2_cent->SetMinimum(100);
-  for (int ic = 0; ic < NC; ic++)
+  //--CNT-FVTXN-FVTXS
+  for (int j = 0; j < 2; j++)
   {
-    double c2_AB = cn[CNTFVTXS][ic][1];
-    double c2_AC = cn[CNTFVTXN][ic][1];
-    double c2_BC = cn[FVTXNFVTXS][ic][1];
-    v2_cent[ic] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+    gvn_cent[j] = new TGraphErrors();
+    sprintf(hname, "gvn_cent_n%i_dAu%i", j, energy);
+    gvn_cent[j]->SetName(hname);
+    gvn_cent[j]->SetMarkerStyle(20);
+    gvn_cent[j]->SetMarkerColor(kBlue);
+    gvn_cent[j]->SetLineColor(kBlue);
+    gvn_cent[j]->SetMinimum(100);
+    for (int ic = 0; ic < NC; ic++)
+    {
+      double c2_AB = cn[CNTFVTXS][ic][j + 1];
+      double c2_AC = cn[CNTFVTXN][ic][j + 1];
+      double c2_BC = cn[FVTXNFVTXS][ic][j + 1];
+      vn_cent[ic][j] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-    //uncertainty
-    double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-    double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-    double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+      //uncertainty
+      double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+      double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+      double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-    double sig_AB = cn_e[CNTFVTXS][ic][1];
-    double sig_AC = cn_e[CNTFVTXN][ic][1];
-    double sig_BC = cn_e[FVTXNFVTXS][ic][1];
+      double sig_AB = cn_e[CNTFVTXS][ic][j + 1];
+      double sig_AC = cn_e[CNTFVTXN][ic][j + 1];
+      double sig_BC = cn_e[FVTXNFVTXS][ic][j + 1];
 
-    double sig_v2 = 0;
-    sig_v2 += TMath::Power(dc2_AB * sig_AB, 2);
-    sig_v2 += TMath::Power(dc2_AC * sig_AC, 2);
-    sig_v2 += TMath::Power(dc2_BC * sig_BC, 2);
-    v2_e_cent[ic] = TMath::Sqrt(sig_v2);
+      double sig_vn = 0;
+      sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
+      sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
+      sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
+      vn_e_cent[ic][j] = TMath::Sqrt(sig_vn);
 
-    //fill tgraph
-    gv2_cent->SetPoint(ic, ic+0.5, v2_cent[ic]);
-    gv2_cent->SetPointError(ic, 0, v2_e_cent[ic]);
+      //fill tgraph
+      gvn_cent[j]->SetPoint(ic, ic + 0.5, vn_cent[ic][j]);
+      gvn_cent[j]->SetPointError(ic, 0, vn_e_cent[ic][j]);
 
-    if (v2_cent[ic] > gv2_cent->GetMaximum())
-      gv2_cent->SetMaximum(v2_cent[ic]);
-    if (v2_cent[ic] < gv2_cent->GetMinimum())
-      gv2_cent->SetMinimum(v2_cent[ic]);
-  }
+      if (vn_cent[ic][j] > gvn_cent[j]->GetMaximum())
+        gvn_cent[j]->SetMaximum(vn_cent[ic][j]);
+      if (vn_cent[ic][j] < gvn_cent[j]->GetMinimum())
+        gvn_cent[j]->SetMinimum(vn_cent[ic][j]);
+    }
+
+    //pT dependence
+    for (int ic = 0; ic < NC; ic++)
+    {
+      gvn_pT[ic][j] = new TGraphErrors();
+      sprintf(hname, "gvn_pT_c%i_n%i_dAu%i", ic, j, energy);
+      gvn_pT[ic][j]->SetName(hname);
+      gvn_pT[ic][j]->SetMarkerStyle(20);
+      gvn_pT[ic][j]->SetMarkerColor(kBlue);
+      gvn_pT[ic][j]->SetLineColor(kBlue);
+      gvn_pT[ic][j]->SetMinimum(100);
+
+      for (int ipt = 0; ipt < NPT; ipt++)
+      {
+        double c2_AB = cn_pt[CNTFVTXS][ic][ipt][j + 1];
+        double c2_AC = cn_pt[CNTFVTXN][ic][ipt][j + 1];
+        double c2_BC = cn[FVTXNFVTXS][ic][j + 1];
+        vn_pT[ic][j][ipt] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+
+        //uncertainty
+        double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+        double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+        double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+
+        double sig_AB = cn_pt_e[CNTFVTXS][ic][ipt][j + 1];
+        double sig_AC = cn_pt_e[CNTFVTXN][ic][ipt][j + 1];
+        double sig_BC = cn_e[FVTXNFVTXS][ic][j + 1];
+
+        double sig_vn = 0;
+        sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
+        sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
+        sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
+        vn_e_pT[ic][j][ipt] = TMath::Sqrt(sig_vn);
+
+        //fill tgraph
+        gvn_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_pT[ic][j][ipt]);
+        gvn_pT[ic][j]->SetPointError(ipt, 0, vn_e_pT[ic][j][ipt]);
+
+        if (vn_pT[ic][j][ipt] > gvn_pT[ic][j]->GetMaximum())
+          gvn_pT[ic][j]->SetMaximum(vn_pT[ic][j][ipt]);
+        if (vn_pT[ic][j][ipt] < gvn_pT[ic][j]->GetMinimum())
+          gvn_pT[ic][j]->SetMinimum(vn_pT[ic][j][ipt]);
+
+      }
+
+    }
+  } // j
 
 
   //==========================================================================//
@@ -617,10 +680,14 @@ void plot_corrfuncs()
 
   float min, max;
 
+  TH1D* hrat;
+
   //temporary bools to make some plotting quicker
-  bool plot_FGBG = false;
   bool plot_CORRPT = false;
+  bool plot_FGBG = true;
   bool plot_CORR = true;
+
+
 
   //==========================================================================//
   // PLOT
@@ -631,6 +698,7 @@ void plot_corrfuncs()
   TCanvas *cFGBGpt[NCORRPT][NPT];
   TCanvas *ccorrpt[NCORRPT][NPT];
   TCanvas *cFGBG[NCORR];
+  TCanvas *cBGrat[NCORR];
   TCanvas *ccorr[NCORR];
 
   for (int icorr = 0; icorr < NCORR; icorr++)
@@ -766,8 +834,8 @@ void plot_corrfuncs()
           dphi_BGsum[icorr][ic]->Scale(
             1. / dphi_BGsum[icorr][ic]->Integral());
 
-          dphi_FGsum[icorr][ic]->Draw();
-          dphi_BGsum[icorr][ic]->Draw("same");
+          dphi_FGsum[icorr][ic]->Draw("Hist,E,");
+          dphi_BGsum[icorr][ic]->Draw("Hist,E,same");
 
           sprintf(ctitle, "%s FGBG %i-%i%%",
                   cCorr[icorr],
@@ -777,6 +845,45 @@ void plot_corrfuncs()
           if (ic == 0)
             le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
         } // ic
+
+
+        sprintf(hname, "cBGrat_%i", icorr);
+        cBGrat[icorr] = new TCanvas(hname, hname, 1200, 1000);
+        cBGrat[icorr]->Divide(3, 2, 0, 0);
+        for (int ic = 0; ic < NC; ic++)
+        {
+          cBGrat[icorr]->GetPad(ic + 1)->SetTopMargin(0.1);
+          cBGrat[icorr]->GetPad(ic + 1)->SetRightMargin(0.02);
+          cBGrat[icorr]->GetPad(ic + 1)->SetBottomMargin(0.1);
+          cBGrat[icorr]->GetPad(ic + 1)->SetLeftMargin(0.1);
+          cBGrat[icorr]->GetPad(ic + 1)->SetTicks(1, 1);
+
+          cBGrat[icorr]->cd(ic + 1);
+
+          hrat = (TH1D*) dphi_BGsum[icorr][ic]->Clone("hrat");
+          hrat->Divide(dphi_BGsum[icorr][1]);
+          hrat->DrawCopy("Hist,E");
+
+          sprintf(ctitle, "%s BG ratio %i-%i%% / %i-%i%%",
+                  cCorr[icorr],
+                  cl[ic], ch[ic], cl[0], ch[0]);
+          ltitle.DrawLatex(0.5, 0.95, ctitle);
+
+          l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
+
+          if (ic == 0)
+            le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
+
+          lc.SetTextColor(fitColor[0]);
+          lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
+                                       cn[icorr][ic][0]));
+
+          // lc.SetTextColor(kRed);
+          // lc.DrawLatex(0.45, 0.64, Form("RMS = % .4f",
+          //                               hrat->GetMean(2)));
+
+        } // ic
+
       } // plot_FGBG
 
       //correlation
@@ -812,16 +919,6 @@ void plot_corrfuncs()
         // Draw
         dphi_corr[icorr][ic]->Draw("P");
 
-        sprintf(ctitle, "%s %i-%i%%",
-                cCorr[icorr],
-                cl[ic], ch[ic]);
-        ltitle.DrawLatex(0.5, 0.95, ctitle);
-
-        l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
-
-        if (ic == 0)
-          le.DrawLatex(0.2, 0.8, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
-
         // plot fit
         fcorr->SetLineColor(kBlack);
         for (int i = 0; i < NPAR; i++)
@@ -840,6 +937,20 @@ void plot_corrfuncs()
           }
           fcorr->DrawCopy("same");
         }
+
+        sprintf(ctitle, "%s %i-%i%%",
+                cCorr[icorr],
+                cl[ic], ch[ic]);
+        ltitle.DrawLatex(0.5, 0.95, ctitle);
+
+        l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
+
+        if (ic == 0)
+          le.DrawLatex(0.2, 0.82, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
+        if (icorr < NCORRPT)
+          le.DrawLatex(0.15, 0.76, Form("%.1f<p_{T}^{trig} [GeV/c]<%.1f",
+                                        ptl[ptsuml], pth[ptsumh]));
+
 
         lc.SetTextColor(fitColor[0]);
         lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
@@ -966,20 +1077,49 @@ void plot_corrfuncs()
 
 
   TCanvas *cv2cent = new TCanvas("cv2cent", "v2 cent", 800, 600);
+  cv2cent->Divide(1, 2);
 
-  cv2cent->cd(1);
-  haxis_cncent->SetMinimum(0.0);
-  haxis_cncent->SetMaximum(0.15);
-  haxis_cncent->SetTitle(";;v_{2}");
-  haxis_cncent->GetYaxis()->SetTitleSize(0.06);
-  haxis_cncent->GetXaxis()->SetLabelSize(0.06);
-  haxis_cncent->DrawCopy();
+  for (int j = 0; j < 2; j++)
+  {
+    cv2cent->cd(j + 1);
+    haxis_cncent->SetMinimum(0.0);
+    haxis_cncent->SetMaximum(0.2);
+    haxis_cncent->SetTitle(Form(";;v_{%i}", j + 2));
+    haxis_cncent->GetYaxis()->SetTitleSize(0.06);
+    haxis_cncent->GetXaxis()->SetLabelSize(0.06);
+    haxis_cncent->DrawCopy();
 
-  gv2_cent->Draw("P");
+    gvn_cent[j]->Draw("P");
 
-  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
-  le.DrawLatex(0.2, 0.8, "3 sub-event #color[4]{CNT}-FVTXN-FVTXS");
+    if (j == 0)
+    {
+      ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV", energy));
+      le.DrawLatex(0.15, 0.86, "3 sub-event #color[4]{CNT}-FVTXN-FVTXS");
+      le.DrawLatex(0.15, 0.80, Form("%.1f<p_{T}^{trig} [GeV/c]<%.1f",
+                                    ptl[ptsuml], pth[ptsumh]));
+    }
+  }
 
+
+  TCanvas *cv2pt = new TCanvas("cv2pt", "v2 pt", 800, 600);
+  cv2pt->Divide(1, 2);
+
+  for (int j = 0; j < 2; j++)
+  {
+
+    cv2pt->cd(j + 1);
+    gvn_pT[0][j]->SetMinimum(0);
+    gvn_pT[0][j]->SetMaximum(0.2);
+    gvn_pT[0][j]->GetXaxis()->SetRangeUser(0, 5);
+    gvn_pT[0][j]->SetTitle(Form(";p_{T} [GeV/c];v_{%i}", j+2));
+    gvn_pT[0][j]->Draw("AP");
+
+    if (j == 0)
+    {
+      ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+      le.DrawLatex(0.2, 0.8, "3 sub-event #color[4]{CNT}-FVTXN-FVTXS");
+    }
+  }
 
 
   //==========================================================================//
@@ -1017,6 +1157,9 @@ void plot_corrfuncs()
         {
           sprintf(cname, "pdfs/dAu%i_%s_FGBG.pdf", energy, cCorr[icorr]);
           cFGBG[icorr]->Print(cname);
+
+          sprintf(cname, "pdfs/dAu%i_%s_BGrat.pdf", energy, cCorr[icorr]);
+          cBGrat[icorr]->Print(cname);
         }
 
         sprintf(cname, "pdfs/dAu%i_%s_corr.pdf", energy, cCorr[icorr]);
@@ -1029,6 +1172,9 @@ void plot_corrfuncs()
 
     sprintf(cname, "pdfs/dAu%i_v2cent.pdf", energy);
     cv2cent->Print(cname);
+
+    sprintf(cname, "pdfs/dAu%i_v2pT.pdf", energy);
+    cv2pt->Print(cname);
   } // printPlots
 
 }
