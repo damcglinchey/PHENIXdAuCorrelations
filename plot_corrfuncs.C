@@ -42,10 +42,10 @@ void plot_corrfuncs()
   const int NPT =  7; // number of pT bins
   // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu200.root";
   // int energy = 200;
-  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu62.root";
-  // int energy = 62;
-  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
-  int energy = 39;
+  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu62.root";
+  int energy = 62;
+  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
+  // int energy = 39;
   // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu20.root";
   // int energy = 20;
 
@@ -53,8 +53,6 @@ void plot_corrfuncs()
   float pth[] = {0.50, 0.75, 1.00, 1.50, 2.00, 3.00, 5.00};
   int cl[] = {0,  5, 10, 20, 40,  60};
   int ch[] = {5, 10, 20, 40, 60, 100};
-  // float ptl[] = {0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00};
-  // float pth[] = {0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 5.00};
 
   int ptsuml = 3;
   int ptsumh = 5;
@@ -65,7 +63,7 @@ void plot_corrfuncs()
 
   // correlations between detectors
   const int NCORRPT = 4; // number of correlations with pT binning
-  const int NCORR = 8; // number of correlations
+  const int NCORR = 8;   // number of correlations
   enum CORR {
     CNTBBCS = 0,
     CNTBBCN,
@@ -861,7 +859,7 @@ void plot_corrfuncs()
           cBGrat[icorr]->cd(ic + 1);
 
           hrat = (TH1D*) dphi_BGsum[icorr][ic]->Clone("hrat");
-          hrat->Divide(dphi_BGsum[icorr][1]);
+          hrat->Divide(dphi_BGsum[icorr][0]);
           hrat->DrawCopy("Hist,E");
 
           sprintf(ctitle, "%s BG ratio %i-%i%% / %i-%i%%",
