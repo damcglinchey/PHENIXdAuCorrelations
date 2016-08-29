@@ -24,10 +24,20 @@
 
 #include <iostream>
 #include <vector>
+#include <utility>
 
 #include "v2.h"
 
 using namespace std;
+
+
+// ... I'll be honest, this is probably not so useful, but more for
+//     my own playing around
+
+typedef pair<double, double> ValErr;
+
+ValErr vn_3sub(ValErr C_AB, ValErr C_AC, ValErr C_BC);
+
 
 void plot_corrfuncs()
 {
@@ -569,25 +579,15 @@ void plot_corrfuncs()
     gvn_CNTFVTXSFVTXN_cent[j]->SetMinimum(100);
     for (int ic = 0; ic < NC; ic++)
     {
-      double c2_AB = cn[CNTFVTXS][ic][j + 1];
-      double c2_AC = cn[CNTFVTXN][ic][j + 1];
-      double c2_BC = cn[FVTXNFVTXS][ic][j + 1];
-      vn_CNTFVTXSFVTXN_cent[ic][j] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-      //uncertainty
-      double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-      double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-      double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+      ValErr res = vn_3sub(
+                     make_pair(cn[CNTFVTXS][ic][j + 1], cn_e[CNTFVTXS][ic][j + 1]),
+                     make_pair(cn[CNTFVTXN][ic][j + 1], cn_e[CNTFVTXN][ic][j + 1]),
+                     make_pair(cn[FVTXNFVTXS][ic][j + 1], cn_e[FVTXNFVTXS][ic][j + 1])
+                   );
 
-      double sig_AB = cn_e[CNTFVTXS][ic][j + 1];
-      double sig_AC = cn_e[CNTFVTXN][ic][j + 1];
-      double sig_BC = cn_e[FVTXNFVTXS][ic][j + 1];
-
-      double sig_vn = 0;
-      sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
-      sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
-      sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
-      vn_e_CNTFVTXSFVTXN_cent[ic][j] = TMath::Sqrt(sig_vn);
+      vn_CNTFVTXSFVTXN_cent[ic][j] = res.first;
+      vn_e_CNTFVTXSFVTXN_cent[ic][j] = res.second;
 
       //fill tgraph
       gvn_CNTFVTXSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTFVTXSFVTXN_cent[ic][j]);
@@ -612,25 +612,14 @@ void plot_corrfuncs()
 
       for (int ipt = 0; ipt < NPT; ipt++)
       {
-        double c2_AB = cn_pt[CNTFVTXS][ic][ipt][j + 1];
-        double c2_AC = cn_pt[CNTFVTXN][ic][ipt][j + 1];
-        double c2_BC = cn[FVTXNFVTXS][ic][j + 1];
-        vn_CNTFVTXSFVTXN_pT[ic][j][ipt] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-        //uncertainty
-        double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-        double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-        double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+        ValErr res = vn_3sub(
+                       make_pair(cn_pt[CNTFVTXS][ic][ipt][j + 1], cn_pt_e[CNTFVTXS][ic][ipt][j + 1]),
+                       make_pair(cn_pt[CNTFVTXN][ic][ipt][j + 1], cn_pt_e[CNTFVTXN][ic][ipt][j + 1]),
+                       make_pair(cn[FVTXNFVTXS][ic][j + 1], cn_e[FVTXNFVTXS][ic][j + 1]) );
 
-        double sig_AB = cn_pt_e[CNTFVTXS][ic][ipt][j + 1];
-        double sig_AC = cn_pt_e[CNTFVTXN][ic][ipt][j + 1];
-        double sig_BC = cn_e[FVTXNFVTXS][ic][j + 1];
-
-        double sig_vn = 0;
-        sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
-        sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
-        sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
-        vn_e_CNTFVTXSFVTXN_pT[ic][j][ipt] = TMath::Sqrt(sig_vn);
+        vn_CNTFVTXSFVTXN_pT[ic][j][ipt] = res.first;
+        vn_e_CNTFVTXSFVTXN_pT[ic][j][ipt] = res.second;
 
         //fill tgraph
         gvn_CNTFVTXSFVTXN_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_CNTFVTXSFVTXN_pT[ic][j][ipt]);
@@ -659,25 +648,16 @@ void plot_corrfuncs()
     gvn_CNTBBCSFVTXS_cent[j]->SetMinimum(100);
     for (int ic = 0; ic < NC; ic++)
     {
-      double c2_AB = cn[CNTBBCS][ic][j + 1];
-      double c2_AC = cn[CNTFVTXS][ic][j + 1];
-      double c2_BC = cn[BBCSFVTXS][ic][j + 1];
-      vn_CNTBBCSFVTXS_cent[ic][j] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-      //uncertainty
-      double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-      double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-      double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+      ValErr res = vn_3sub(
+                     make_pair(cn[CNTBBCS][ic][j + 1], cn_e[CNTBBCS][ic][j + 1]),
+                     make_pair(cn[CNTFVTXS][ic][j + 1], cn_e[CNTFVTXS][ic][j + 1]),
+                     make_pair(cn[BBCSFVTXS][ic][j + 1], cn_e[BBCSFVTXS][ic][j + 1])
+                   );
 
-      double sig_AB = cn_e[CNTBBCS][ic][j + 1];
-      double sig_AC = cn_e[CNTFVTXS][ic][j + 1];
-      double sig_BC = cn_e[BBCSFVTXS][ic][j + 1];
+      vn_CNTBBCSFVTXS_cent[ic][j] = res.first;
+      vn_e_CNTBBCSFVTXS_cent[ic][j] = res.second;
 
-      double sig_vn = 0;
-      sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
-      sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
-      sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
-      vn_e_CNTBBCSFVTXS_cent[ic][j] = TMath::Sqrt(sig_vn);
 
       //fill tgraph
       gvn_CNTBBCSFVTXS_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXS_cent[ic][j]);
@@ -702,25 +682,14 @@ void plot_corrfuncs()
 
       for (int ipt = 0; ipt < NPT; ipt++)
       {
-        double c2_AB = cn_pt[CNTBBCS][ic][ipt][j + 1];
-        double c2_AC = cn_pt[CNTFVTXS][ic][ipt][j + 1];
-        double c2_BC = cn[BBCSFVTXS][ic][j + 1];
-        vn_CNTBBCSFVTXS_pT[ic][j][ipt] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-        //uncertainty
-        double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-        double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-        double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+        ValErr res = vn_3sub(
+                       make_pair(cn_pt[CNTBBCS][ic][ipt][j + 1], cn_pt_e[CNTBBCS][ic][ipt][j + 1]),
+                       make_pair(cn_pt[CNTFVTXS][ic][ipt][j + 1], cn_pt_e[CNTFVTXS][ic][ipt][j + 1]),
+                       make_pair(cn[BBCSFVTXS][ic][j + 1], cn_e[BBCSFVTXS][ic][j + 1]) );
 
-        double sig_AB = cn_pt_e[CNTBBCS][ic][ipt][j + 1];
-        double sig_AC = cn_pt_e[CNTFVTXS][ic][ipt][j + 1];
-        double sig_BC = cn_e[BBCSFVTXS][ic][j + 1];
-
-        double sig_vn = 0;
-        sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
-        sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
-        sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
-        vn_e_CNTBBCSFVTXS_pT[ic][j][ipt] = TMath::Sqrt(sig_vn);
+        vn_CNTBBCSFVTXS_pT[ic][j][ipt] = res.first;
+        vn_e_CNTBBCSFVTXS_pT[ic][j][ipt] = res.second;
 
         //fill tgraph
         gvn_CNTBBCSFVTXS_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_CNTBBCSFVTXS_pT[ic][j][ipt]);
@@ -749,25 +718,15 @@ void plot_corrfuncs()
     gvn_CNTBBCSFVTXN_cent[j]->SetMinimum(100);
     for (int ic = 0; ic < NC; ic++)
     {
-      double c2_AB = cn[CNTBBCS][ic][j + 1];
-      double c2_AC = cn[CNTFVTXN][ic][j + 1];
-      double c2_BC = cn[FVTXNBBCS][ic][j + 1];
-      vn_CNTBBCSFVTXN_cent[ic][j] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
 
-      //uncertainty
-      double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-      double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-      double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+      ValErr res = vn_3sub(
+                     make_pair(cn[CNTBBCS][ic][j + 1], cn_e[CNTBBCS][ic][j + 1]),
+                     make_pair(cn[CNTFVTXN][ic][j + 1], cn_e[CNTFVTXN][ic][j + 1]),
+                     make_pair(cn[FVTXNBBCS][ic][j + 1], cn_e[FVTXNBBCS][ic][j + 1])
+                   );
 
-      double sig_AB = cn_e[CNTBBCS][ic][j + 1];
-      double sig_AC = cn_e[CNTFVTXN][ic][j + 1];
-      double sig_BC = cn_e[FVTXNBBCS][ic][j + 1];
-
-      double sig_vn = 0;
-      sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
-      sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
-      sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
-      vn_e_CNTBBCSFVTXN_cent[ic][j] = TMath::Sqrt(sig_vn);
+      vn_CNTBBCSFVTXN_cent[ic][j] = res.first;
+      vn_e_CNTBBCSFVTXN_cent[ic][j] = res.second;
 
       //fill tgraph
       gvn_CNTBBCSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXN_cent[ic][j]);
@@ -792,25 +751,13 @@ void plot_corrfuncs()
 
       for (int ipt = 0; ipt < NPT; ipt++)
       {
-        double c2_AB = cn_pt[CNTBBCS][ic][ipt][j + 1];
-        double c2_AC = cn_pt[CNTFVTXN][ic][ipt][j + 1];
-        double c2_BC = cn[FVTXNBBCS][ic][j + 1];
-        vn_CNTBBCSFVTXN_pT[ic][j][ipt] = TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
+        ValErr res = vn_3sub(
+                       make_pair(cn_pt[CNTBBCS][ic][ipt][j + 1], cn_pt_e[CNTBBCS][ic][ipt][j + 1]),
+                       make_pair(cn_pt[CNTFVTXN][ic][ipt][j + 1], cn_pt_e[CNTFVTXN][ic][ipt][j + 1]),
+                       make_pair(cn[FVTXNBBCS][ic][j + 1], cn_e[FVTXNBBCS][ic][j + 1]) );
 
-        //uncertainty
-        double dc2_AB = 0.5 * (c2_AC / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-        double dc2_AC = 0.5 * (c2_AB / c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-        double dc2_BC = -0.5 * (c2_AB * c2_AC) / (c2_BC * c2_BC) / TMath::Sqrt( (c2_AB * c2_AC) / c2_BC);
-
-        double sig_AB = cn_pt_e[CNTBBCS][ic][ipt][j + 1];
-        double sig_AC = cn_pt_e[CNTFVTXN][ic][ipt][j + 1];
-        double sig_BC = cn_e[FVTXNBBCS][ic][j + 1];
-
-        double sig_vn = 0;
-        sig_vn += TMath::Power(dc2_AB * sig_AB, 2);
-        sig_vn += TMath::Power(dc2_AC * sig_AC, 2);
-        sig_vn += TMath::Power(dc2_BC * sig_BC, 2);
-        vn_e_CNTBBCSFVTXN_pT[ic][j][ipt] = TMath::Sqrt(sig_vn);
+        vn_CNTBBCSFVTXN_pT[ic][j][ipt] = res.first;
+        vn_e_CNTBBCSFVTXN_pT[ic][j][ipt] = res.second;
 
         //fill tgraph
         gvn_CNTBBCSFVTXN_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_CNTBBCSFVTXN_pT[ic][j][ipt]);
@@ -1474,5 +1421,34 @@ void plot_corrfuncs()
     sprintf(cname, "pdfs/dAu%i_v2.pdf", energy);
     cv2->Print(cname);
   } // printPlots
+
+}
+
+
+
+
+///
+/// Calculate v_n using the 3 sub-event method
+///
+ValErr vn_3sub(ValErr C_AB, ValErr C_AC, ValErr C_BC)
+{
+  // return values;
+  double vn = 0;
+  double err = 0;
+
+  // Calculate the value
+  vn = TMath::Sqrt( (C_AB.first * C_AC.first) / C_BC.first);
+
+  // Calculate the uncertainty using error propogation
+  double dC_AB = +0.5 * (C_AC.first / C_BC.first) / vn;
+  double dC_AC = +0.5 * (C_AB.first / C_BC.first) / vn;
+  double dC_BC = -0.5 * (C_AB.first * C_AC.first) / (C_BC.first * C_BC.first) / vn;
+
+  err += TMath::Power(dC_AB * C_AB.second, 2);
+  err += TMath::Power(dC_AC * C_AC.second, 2);
+  err += TMath::Power(dC_BC * C_BC.second, 2);
+  err = TMath::Sqrt(err);
+
+  return make_pair(vn, err);
 
 }
