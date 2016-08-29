@@ -31,14 +31,13 @@
 using namespace std;
 
 
-// ... I'll be honest, this is probably not so useful, but more for
-//     my own playing around
-
 typedef pair<double, double> ValErr;
 
 ValErr vn_3sub(ValErr C_AB, ValErr C_AC, ValErr C_BC);
 
-
+///
+/// Main Function
+///
 void plot_corrfuncs()
 {
   gStyle->SetOptStat(0);
@@ -52,12 +51,12 @@ void plot_corrfuncs()
   const int NC  =  6; // number of centrality bins
   const int NZ  = 10; // number of z bins
   const int NPT =  7; // number of pT bins
-  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu200.root";
-  // int energy = 200;
+  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu200.root";
+  int energy = 200;
   // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu62.root";
   // int energy = 62;
-  const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
-  int energy = 39;
+  // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu39.root";
+  // int energy = 39;
   // const char *inFile = "rootfiles/CorrFuncdAuBES_dAu20.root";
   // int energy = 20;
 
@@ -72,6 +71,12 @@ void plot_corrfuncs()
   // int ptsumh = NPT - 1;
 
   bool printPlots = true;
+
+  // plotting options
+  bool plot_CORRPT = false;
+  bool plot_FGBG = true;
+  bool plot_CORR = true;
+
 
   // correlations between detectors
   const int NCORRPT = 4; // number of correlations with pT binning
@@ -144,12 +149,9 @@ void plot_corrfuncs()
   fcorr->SetLineColor(kBlack);
   fcorr->SetLineStyle(2);
 
-  // pT dependent cn's
-  double cn_pt[NCORRPT][NC][NPT][NPAR];
-  double cn_pt_e[NCORRPT][NC][NPT][NPAR];
-  // pT integrated cn's
-  double cn[NCORR][NC][NPAR];
-  double cn_e[NCORR][NC][NPAR];
+  // cn's
+  ValErr cn_pt[NCORRPT][NC][NPT][NPAR];
+  ValErr cn[NCORR][NC][NPAR];
 
 
   //-- cn graphs
@@ -158,26 +160,20 @@ void plot_corrfuncs()
   TGraphErrors *gc2c1[NCORR];
 
 
-  //-- v2
-  double vn_CNTFVTXSFVTXN_cent[NC][2];
-  double vn_e_CNTFVTXSFVTXN_cent[NC][2];
+  //-- vn (3 sub-event method)
+  ValErr vn_CNTFVTXSFVTXN_cent[NC][2];
+  ValErr vn_CNTFVTXSFVTXN_pT[NC][2][NPT];
   TGraphErrors *gvn_CNTFVTXSFVTXN_cent[2];
-  double vn_CNTFVTXSFVTXN_pT[NC][2][NPT];
-  double vn_e_CNTFVTXSFVTXN_pT[NC][2][NPT];
   TGraphErrors *gvn_CNTFVTXSFVTXN_pT[NC][2];
 
-  double vn_CNTBBCSFVTXS_cent[NC][2];
-  double vn_e_CNTBBCSFVTXS_cent[NC][2];
+  ValErr vn_CNTBBCSFVTXS_cent[NC][2];
+  ValErr vn_CNTBBCSFVTXS_pT[NC][2][NPT];
   TGraphErrors *gvn_CNTBBCSFVTXS_cent[2];
-  double vn_CNTBBCSFVTXS_pT[NC][2][NPT];
-  double vn_e_CNTBBCSFVTXS_pT[NC][2][NPT];
   TGraphErrors *gvn_CNTBBCSFVTXS_pT[NC][2];
 
-  double vn_CNTBBCSFVTXN_cent[NC][2];
-  double vn_e_CNTBBCSFVTXN_cent[NC][2];
+  ValErr vn_CNTBBCSFVTXN_cent[NC][2];
+  ValErr vn_CNTBBCSFVTXN_pT[NC][2][NPT];
   TGraphErrors *gvn_CNTBBCSFVTXN_cent[2];
-  double vn_CNTBBCSFVTXN_pT[NC][2][NPT];
-  double vn_e_CNTBBCSFVTXN_pT[NC][2][NPT];
   TGraphErrors *gvn_CNTBBCSFVTXN_pT[NC][2];
 
   //-- temp stuff
@@ -450,22 +446,22 @@ void plot_corrfuncs()
       {
         for (int ipt = 0; ipt < NPT; ipt++)
         {
-          dphi_corr_pt[icorr][ic][ipt]->Fit(fcorr, "RQ0N");
+          dphi_corr_pt[icorr][ic][ipt]->Fit(fcorr, "RQ0");
           for (int i = 0; i < NPAR; i++)
           {
-            cn_pt[icorr][ic][ipt][i] = fcorr->GetParameter(i);
-            cn_pt_e[icorr][ic][ipt][i] = fcorr->GetParError(i);
+            cn_pt[icorr][ic][ipt][i].first = fcorr->GetParameter(i);
+            cn_pt[icorr][ic][ipt][i].second = fcorr->GetParError(i);
           }
         } // ipt
       }
 
       //-- pT integrated
 
-      dphi_corr[icorr][ic]->Fit(fcorr, "RQ0N");
+      dphi_corr[icorr][ic]->Fit(fcorr, "RQ0");
       for (int i = 0; i < NPAR; i++)
       {
-        cn[icorr][ic][i] = fcorr->GetParameter(i);
-        cn_e[icorr][ic][i] = fcorr->GetParError(i);
+        cn[icorr][ic][i].first = fcorr->GetParameter(i);
+        cn[icorr][ic][i].second = fcorr->GetParError(i);
       }
 
     } // ic
@@ -497,10 +493,10 @@ void plot_corrfuncs()
         {
           gcn_pt[icorr][ic][ipar]->SetPoint(ipt,
                                             0.5 * (ptl[ipt] + pth[ipt]),
-                                            cn_pt[icorr][ic][ipt][ipar]);
+                                            cn_pt[icorr][ic][ipt][ipar].first);
           gcn_pt[icorr][ic][ipar]->SetPointError(ipt,
                                                  0,
-                                                 cn_pt_e[icorr][ic][ipt][ipar]);
+                                                 cn_pt[icorr][ic][ipt][ipar].second);
         } // ipt
       } // ipar
     } // ic
@@ -521,10 +517,10 @@ void plot_corrfuncs()
 
     for (int ic = 0; ic < NC; ic++)
     {
-      double c2c1 = cn[icorr][ic][1] / cn[icorr][ic][0];
+      double c2c1 = cn[icorr][ic][1].first / cn[icorr][ic][0].first;
       double unc = 0;
-      unc += TMath::Power(cn_e[icorr][ic][0] / cn[icorr][ic][0], 2);
-      unc += TMath::Power(cn_e[icorr][ic][1] / cn[icorr][ic][1], 2);
+      unc += TMath::Power(cn[icorr][ic][0].second / cn[icorr][ic][0].first, 2);
+      unc += TMath::Power(cn[icorr][ic][1].second / cn[icorr][ic][1].first, 2);
       unc = c2c1 * TMath::Sqrt(unc);
 
       gc2c1[icorr]->SetPoint(ic, ic + 0.5, c2c1);
@@ -549,13 +545,13 @@ void plot_corrfuncs()
 
       for (int ic = 0; ic < NC; ic++)
       {
-        gcn[icorr][ipar]->SetPoint(ic, ic + 0.5, cn[icorr][ic][ipar]);
-        gcn[icorr][ipar]->SetPointError(ic, 0, cn_e[icorr][ic][ipar]);
+        gcn[icorr][ipar]->SetPoint(ic, ic + 0.5, cn[icorr][ic][ipar].first);
+        gcn[icorr][ipar]->SetPointError(ic, 0, cn[icorr][ic][ipar].second);
 
-        if (cn[icorr][ic][ipar] > gcn[icorr][ipar]->GetMaximum())
-          gcn[icorr][ipar]->SetMaximum(cn[icorr][ic][ipar]);
-        if (cn[icorr][ic][ipar] < gcn[icorr][ipar]->GetMinimum())
-          gcn[icorr][ipar]->SetMinimum(cn[icorr][ic][ipar]);
+        if (cn[icorr][ic][ipar].first > gcn[icorr][ipar]->GetMaximum())
+          gcn[icorr][ipar]->SetMaximum(cn[icorr][ic][ipar].first);
+        if (cn[icorr][ic][ipar].first < gcn[icorr][ipar]->GetMinimum())
+          gcn[icorr][ipar]->SetMinimum(cn[icorr][ic][ipar].first);
       }
     } // ipar
   } // icorr
@@ -580,23 +576,18 @@ void plot_corrfuncs()
     for (int ic = 0; ic < NC; ic++)
     {
 
-      ValErr res = vn_3sub(
-                     make_pair(cn[CNTFVTXS][ic][j + 1], cn_e[CNTFVTXS][ic][j + 1]),
-                     make_pair(cn[CNTFVTXN][ic][j + 1], cn_e[CNTFVTXN][ic][j + 1]),
-                     make_pair(cn[FVTXNFVTXS][ic][j + 1], cn_e[FVTXNFVTXS][ic][j + 1])
-                   );
-
-      vn_CNTFVTXSFVTXN_cent[ic][j] = res.first;
-      vn_e_CNTFVTXSFVTXN_cent[ic][j] = res.second;
+      vn_CNTFVTXSFVTXN_cent[ic][j] = vn_3sub(cn[CNTFVTXS][ic][j + 1],
+                                             cn[CNTFVTXN][ic][j + 1],
+                                             cn[FVTXNFVTXS][ic][j + 1] );
 
       //fill tgraph
-      gvn_CNTFVTXSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTFVTXSFVTXN_cent[ic][j]);
-      gvn_CNTFVTXSFVTXN_cent[j]->SetPointError(ic, 0, vn_e_CNTFVTXSFVTXN_cent[ic][j]);
+      gvn_CNTFVTXSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTFVTXSFVTXN_cent[ic][j].first);
+      gvn_CNTFVTXSFVTXN_cent[j]->SetPointError(ic, 0, vn_CNTFVTXSFVTXN_cent[ic][j].second);
 
-      if (vn_CNTFVTXSFVTXN_cent[ic][j] > gvn_CNTFVTXSFVTXN_cent[j]->GetMaximum())
-        gvn_CNTFVTXSFVTXN_cent[j]->SetMaximum(vn_CNTFVTXSFVTXN_cent[ic][j]);
-      if (vn_CNTFVTXSFVTXN_cent[ic][j] < gvn_CNTFVTXSFVTXN_cent[j]->GetMinimum())
-        gvn_CNTFVTXSFVTXN_cent[j]->SetMinimum(vn_CNTFVTXSFVTXN_cent[ic][j]);
+      if (vn_CNTFVTXSFVTXN_cent[ic][j].first > gvn_CNTFVTXSFVTXN_cent[j]->GetMaximum())
+        gvn_CNTFVTXSFVTXN_cent[j]->SetMaximum(vn_CNTFVTXSFVTXN_cent[ic][j].first);
+      if (vn_CNTFVTXSFVTXN_cent[ic][j].first < gvn_CNTFVTXSFVTXN_cent[j]->GetMinimum())
+        gvn_CNTFVTXSFVTXN_cent[j]->SetMinimum(vn_CNTFVTXSFVTXN_cent[ic][j].first);
     }
 
     //pT dependence
@@ -613,22 +604,20 @@ void plot_corrfuncs()
       for (int ipt = 0; ipt < NPT; ipt++)
       {
 
-        ValErr res = vn_3sub(
-                       make_pair(cn_pt[CNTFVTXS][ic][ipt][j + 1], cn_pt_e[CNTFVTXS][ic][ipt][j + 1]),
-                       make_pair(cn_pt[CNTFVTXN][ic][ipt][j + 1], cn_pt_e[CNTFVTXN][ic][ipt][j + 1]),
-                       make_pair(cn[FVTXNFVTXS][ic][j + 1], cn_e[FVTXNFVTXS][ic][j + 1]) );
-
-        vn_CNTFVTXSFVTXN_pT[ic][j][ipt] = res.first;
-        vn_e_CNTFVTXSFVTXN_pT[ic][j][ipt] = res.second;
+        vn_CNTFVTXSFVTXN_pT[ic][j][ipt] = vn_3sub(cn_pt[CNTFVTXS][ic][ipt][j + 1],
+                                          cn_pt[CNTFVTXN][ic][ipt][j + 1],
+                                          cn[FVTXNFVTXS][ic][j + 1]);
 
         //fill tgraph
-        gvn_CNTFVTXSFVTXN_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_CNTFVTXSFVTXN_pT[ic][j][ipt]);
-        gvn_CNTFVTXSFVTXN_pT[ic][j]->SetPointError(ipt, 0, vn_e_CNTFVTXSFVTXN_pT[ic][j][ipt]);
+        gvn_CNTFVTXSFVTXN_pT[ic][j]->SetPoint(ipt,
+                                              0.5 * (ptl[ipt] + pth[ipt]),
+                                              vn_CNTFVTXSFVTXN_pT[ic][j][ipt].first);
+        gvn_CNTFVTXSFVTXN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTFVTXSFVTXN_pT[ic][j][ipt].second);
 
-        if (vn_CNTFVTXSFVTXN_pT[ic][j][ipt] > gvn_CNTFVTXSFVTXN_pT[ic][j]->GetMaximum())
-          gvn_CNTFVTXSFVTXN_pT[ic][j]->SetMaximum(vn_CNTFVTXSFVTXN_pT[ic][j][ipt]);
-        if (vn_CNTFVTXSFVTXN_pT[ic][j][ipt] < gvn_CNTFVTXSFVTXN_pT[ic][j]->GetMinimum())
-          gvn_CNTFVTXSFVTXN_pT[ic][j]->SetMinimum(vn_CNTFVTXSFVTXN_pT[ic][j][ipt]);
+        if (vn_CNTFVTXSFVTXN_pT[ic][j][ipt].first > gvn_CNTFVTXSFVTXN_pT[ic][j]->GetMaximum())
+          gvn_CNTFVTXSFVTXN_pT[ic][j]->SetMaximum(vn_CNTFVTXSFVTXN_pT[ic][j][ipt].first);
+        if (vn_CNTFVTXSFVTXN_pT[ic][j][ipt].first < gvn_CNTFVTXSFVTXN_pT[ic][j]->GetMinimum())
+          gvn_CNTFVTXSFVTXN_pT[ic][j]->SetMinimum(vn_CNTFVTXSFVTXN_pT[ic][j][ipt].first);
 
       }
 
@@ -649,24 +638,19 @@ void plot_corrfuncs()
     for (int ic = 0; ic < NC; ic++)
     {
 
-      ValErr res = vn_3sub(
-                     make_pair(cn[CNTBBCS][ic][j + 1], cn_e[CNTBBCS][ic][j + 1]),
-                     make_pair(cn[CNTFVTXS][ic][j + 1], cn_e[CNTFVTXS][ic][j + 1]),
-                     make_pair(cn[BBCSFVTXS][ic][j + 1], cn_e[BBCSFVTXS][ic][j + 1])
-                   );
-
-      vn_CNTBBCSFVTXS_cent[ic][j] = res.first;
-      vn_e_CNTBBCSFVTXS_cent[ic][j] = res.second;
-
+      vn_CNTBBCSFVTXS_cent[ic][j] = vn_3sub(
+                                      cn[CNTBBCS][ic][j + 1],
+                                      cn[CNTFVTXS][ic][j + 1],
+                                      cn[BBCSFVTXS][ic][j + 1] );
 
       //fill tgraph
-      gvn_CNTBBCSFVTXS_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXS_cent[ic][j]);
-      gvn_CNTBBCSFVTXS_cent[j]->SetPointError(ic, 0, vn_e_CNTBBCSFVTXS_cent[ic][j]);
+      gvn_CNTBBCSFVTXS_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXS_cent[ic][j].first);
+      gvn_CNTBBCSFVTXS_cent[j]->SetPointError(ic, 0, vn_CNTBBCSFVTXS_cent[ic][j].second);
 
-      if (vn_CNTBBCSFVTXS_cent[ic][j] > gvn_CNTBBCSFVTXS_cent[j]->GetMaximum())
-        gvn_CNTBBCSFVTXS_cent[j]->SetMaximum(vn_CNTBBCSFVTXS_cent[ic][j]);
-      if (vn_CNTBBCSFVTXS_cent[ic][j] < gvn_CNTBBCSFVTXS_cent[j]->GetMinimum())
-        gvn_CNTBBCSFVTXS_cent[j]->SetMinimum(vn_CNTBBCSFVTXS_cent[ic][j]);
+      if (vn_CNTBBCSFVTXS_cent[ic][j].first > gvn_CNTBBCSFVTXS_cent[j]->GetMaximum())
+        gvn_CNTBBCSFVTXS_cent[j]->SetMaximum(vn_CNTBBCSFVTXS_cent[ic][j].first);
+      if (vn_CNTBBCSFVTXS_cent[ic][j].first < gvn_CNTBBCSFVTXS_cent[j]->GetMinimum())
+        gvn_CNTBBCSFVTXS_cent[j]->SetMinimum(vn_CNTBBCSFVTXS_cent[ic][j].first);
     }
 
     //pT dependence
@@ -683,22 +667,21 @@ void plot_corrfuncs()
       for (int ipt = 0; ipt < NPT; ipt++)
       {
 
-        ValErr res = vn_3sub(
-                       make_pair(cn_pt[CNTBBCS][ic][ipt][j + 1], cn_pt_e[CNTBBCS][ic][ipt][j + 1]),
-                       make_pair(cn_pt[CNTFVTXS][ic][ipt][j + 1], cn_pt_e[CNTFVTXS][ic][ipt][j + 1]),
-                       make_pair(cn[BBCSFVTXS][ic][j + 1], cn_e[BBCSFVTXS][ic][j + 1]) );
-
-        vn_CNTBBCSFVTXS_pT[ic][j][ipt] = res.first;
-        vn_e_CNTBBCSFVTXS_pT[ic][j][ipt] = res.second;
+        vn_CNTBBCSFVTXS_pT[ic][j][ipt] = vn_3sub(
+                                           cn_pt[CNTBBCS][ic][ipt][j + 1],
+                                           cn_pt[CNTFVTXS][ic][ipt][j + 1],
+                                           cn[BBCSFVTXS][ic][j + 1] );
 
         //fill tgraph
-        gvn_CNTBBCSFVTXS_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_CNTBBCSFVTXS_pT[ic][j][ipt]);
-        gvn_CNTBBCSFVTXS_pT[ic][j]->SetPointError(ipt, 0, vn_e_CNTBBCSFVTXS_pT[ic][j][ipt]);
+        gvn_CNTBBCSFVTXS_pT[ic][j]->SetPoint(ipt,
+                                             0.5 * (ptl[ipt] + pth[ipt]),
+                                             vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
+        gvn_CNTBBCSFVTXS_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSFVTXS_pT[ic][j][ipt].second);
 
-        if (vn_CNTBBCSFVTXS_pT[ic][j][ipt] > gvn_CNTBBCSFVTXS_pT[ic][j]->GetMaximum())
-          gvn_CNTBBCSFVTXS_pT[ic][j]->SetMaximum(vn_CNTBBCSFVTXS_pT[ic][j][ipt]);
-        if (vn_CNTBBCSFVTXS_pT[ic][j][ipt] < gvn_CNTBBCSFVTXS_pT[ic][j]->GetMinimum())
-          gvn_CNTBBCSFVTXS_pT[ic][j]->SetMinimum(vn_CNTBBCSFVTXS_pT[ic][j][ipt]);
+        if (vn_CNTBBCSFVTXS_pT[ic][j][ipt].first > gvn_CNTBBCSFVTXS_pT[ic][j]->GetMaximum())
+          gvn_CNTBBCSFVTXS_pT[ic][j]->SetMaximum(vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
+        if (vn_CNTBBCSFVTXS_pT[ic][j][ipt].first < gvn_CNTBBCSFVTXS_pT[ic][j]->GetMinimum())
+          gvn_CNTBBCSFVTXS_pT[ic][j]->SetMinimum(vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
 
       }
 
@@ -719,23 +702,19 @@ void plot_corrfuncs()
     for (int ic = 0; ic < NC; ic++)
     {
 
-      ValErr res = vn_3sub(
-                     make_pair(cn[CNTBBCS][ic][j + 1], cn_e[CNTBBCS][ic][j + 1]),
-                     make_pair(cn[CNTFVTXN][ic][j + 1], cn_e[CNTFVTXN][ic][j + 1]),
-                     make_pair(cn[FVTXNBBCS][ic][j + 1], cn_e[FVTXNBBCS][ic][j + 1])
-                   );
-
-      vn_CNTBBCSFVTXN_cent[ic][j] = res.first;
-      vn_e_CNTBBCSFVTXN_cent[ic][j] = res.second;
+      vn_CNTBBCSFVTXN_cent[ic][j] = vn_3sub(
+                                      cn[CNTBBCS][ic][j + 1],
+                                      cn[CNTFVTXN][ic][j + 1],
+                                      cn[FVTXNBBCS][ic][j + 1] );
 
       //fill tgraph
-      gvn_CNTBBCSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXN_cent[ic][j]);
-      gvn_CNTBBCSFVTXN_cent[j]->SetPointError(ic, 0, vn_e_CNTBBCSFVTXN_cent[ic][j]);
+      gvn_CNTBBCSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXN_cent[ic][j].first);
+      gvn_CNTBBCSFVTXN_cent[j]->SetPointError(ic, 0, vn_CNTBBCSFVTXN_cent[ic][j].second);
 
-      if (vn_CNTBBCSFVTXN_cent[ic][j] > gvn_CNTBBCSFVTXN_cent[j]->GetMaximum())
-        gvn_CNTBBCSFVTXN_cent[j]->SetMaximum(vn_CNTBBCSFVTXN_cent[ic][j]);
-      if (vn_CNTBBCSFVTXN_cent[ic][j] < gvn_CNTBBCSFVTXN_cent[j]->GetMinimum())
-        gvn_CNTBBCSFVTXN_cent[j]->SetMinimum(vn_CNTBBCSFVTXN_cent[ic][j]);
+      if (vn_CNTBBCSFVTXN_cent[ic][j].first > gvn_CNTBBCSFVTXN_cent[j]->GetMaximum())
+        gvn_CNTBBCSFVTXN_cent[j]->SetMaximum(vn_CNTBBCSFVTXN_cent[ic][j].first);
+      if (vn_CNTBBCSFVTXN_cent[ic][j].first < gvn_CNTBBCSFVTXN_cent[j]->GetMinimum())
+        gvn_CNTBBCSFVTXN_cent[j]->SetMinimum(vn_CNTBBCSFVTXN_cent[ic][j].first);
     }
 
     //pT dependence
@@ -751,22 +730,21 @@ void plot_corrfuncs()
 
       for (int ipt = 0; ipt < NPT; ipt++)
       {
-        ValErr res = vn_3sub(
-                       make_pair(cn_pt[CNTBBCS][ic][ipt][j + 1], cn_pt_e[CNTBBCS][ic][ipt][j + 1]),
-                       make_pair(cn_pt[CNTFVTXN][ic][ipt][j + 1], cn_pt_e[CNTFVTXN][ic][ipt][j + 1]),
-                       make_pair(cn[FVTXNBBCS][ic][j + 1], cn_e[FVTXNBBCS][ic][j + 1]) );
-
-        vn_CNTBBCSFVTXN_pT[ic][j][ipt] = res.first;
-        vn_e_CNTBBCSFVTXN_pT[ic][j][ipt] = res.second;
+        vn_CNTBBCSFVTXN_pT[ic][j][ipt] = vn_3sub(
+                                           cn_pt[CNTBBCS][ic][ipt][j + 1],
+                                           cn_pt[CNTFVTXN][ic][ipt][j + 1],
+                                           cn[FVTXNBBCS][ic][j + 1] );
 
         //fill tgraph
-        gvn_CNTBBCSFVTXN_pT[ic][j]->SetPoint(ipt, 0.5 * (ptl[ipt] + pth[ipt]), vn_CNTBBCSFVTXN_pT[ic][j][ipt]);
-        gvn_CNTBBCSFVTXN_pT[ic][j]->SetPointError(ipt, 0, vn_e_CNTBBCSFVTXN_pT[ic][j][ipt]);
+        gvn_CNTBBCSFVTXN_pT[ic][j]->SetPoint(ipt,
+                                             0.5 * (ptl[ipt] + pth[ipt]),
+                                             vn_CNTBBCSFVTXN_pT[ic][j][ipt].first);
+        gvn_CNTBBCSFVTXN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSFVTXN_pT[ic][j][ipt].second);
 
-        if (vn_CNTBBCSFVTXN_pT[ic][j][ipt] > gvn_CNTBBCSFVTXN_pT[ic][j]->GetMaximum())
-          gvn_CNTBBCSFVTXN_pT[ic][j]->SetMaximum(vn_CNTBBCSFVTXN_pT[ic][j][ipt]);
-        if (vn_CNTBBCSFVTXN_pT[ic][j][ipt] < gvn_CNTBBCSFVTXN_pT[ic][j]->GetMinimum())
-          gvn_CNTBBCSFVTXN_pT[ic][j]->SetMinimum(vn_CNTBBCSFVTXN_pT[ic][j][ipt]);
+        if (vn_CNTBBCSFVTXN_pT[ic][j][ipt].first > gvn_CNTBBCSFVTXN_pT[ic][j]->GetMaximum())
+          gvn_CNTBBCSFVTXN_pT[ic][j]->SetMaximum(vn_CNTBBCSFVTXN_pT[ic][j][ipt].first);
+        if (vn_CNTBBCSFVTXN_pT[ic][j][ipt].first < gvn_CNTBBCSFVTXN_pT[ic][j]->GetMinimum())
+          gvn_CNTBBCSFVTXN_pT[ic][j]->SetMinimum(vn_CNTBBCSFVTXN_pT[ic][j][ipt].first);
 
       }
 
@@ -820,23 +798,13 @@ void plot_corrfuncs()
 
   for (int ibin = 1; ibin <= haxis_cncent->GetNbinsX(); ibin++)
   {
-    // if (ibin < 2 || ibin > NC)
-    // haxis_cncent->GetXaxis()->SetBinLabel(ibin, "");
-    // else
-    // {
     sprintf(ctitle, "%i - %i%%", cl[ibin - 1], ch[ibin - 1]);
     haxis_cncent->GetXaxis()->SetBinLabel(ibin, ctitle);
-    // }
   }
 
   float min, max;
 
   TH1D* hrat;
-
-  //temporary bools to make some plotting quicker
-  bool plot_CORRPT = false;
-  bool plot_FGBG = true;
-  bool plot_CORR = true;
 
 
 
@@ -912,7 +880,7 @@ void plot_corrfuncs()
           for (int i = 0; i < NPAR; i++)
           {
             if (i == 0)
-              fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i]);
+              fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i].first);
             else
               fcorr->SetParameter(i, 0);
           }
@@ -941,7 +909,7 @@ void plot_corrfuncs()
           // plot fit
           fcorr->SetLineColor(kBlack);
           for (int i = 0; i < NPAR; i++)
-            fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i]);
+            fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i].first);
           fcorr->DrawCopy("same");
 
           for (int ipar = 0; ipar < NPAR; ipar++)
@@ -950,7 +918,7 @@ void plot_corrfuncs()
             for (int i = 0; i < NPAR; i++)
             {
               if (i == ipar)
-                fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i]);
+                fcorr->SetParameter(i, cn_pt[icorr][ic][ipt][i].first);
               else
                 fcorr->SetParameter(i, 0);
             }
@@ -1027,7 +995,7 @@ void plot_corrfuncs()
 
           lc.SetTextColor(fitColor[0]);
           lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
-                                       cn[icorr][ic][0]));
+                                       cn[icorr][ic][0].first));
 
           // lc.SetTextColor(kRed);
           // lc.DrawLatex(0.45, 0.64, Form("RMS = % .4f",
@@ -1055,7 +1023,7 @@ void plot_corrfuncs()
         for (int i = 0; i < NPAR; i++)
         {
           if (i == 0)
-            fcorr->SetParameter(i, cn[icorr][ic][i]);
+            fcorr->SetParameter(i, cn[icorr][ic][i].first);
           else
             fcorr->SetParameter(i, 0);
         }
@@ -1073,7 +1041,7 @@ void plot_corrfuncs()
         // plot fit
         fcorr->SetLineColor(kBlack);
         for (int i = 0; i < NPAR; i++)
-          fcorr->SetParameter(i, cn[icorr][ic][i]);
+          fcorr->SetParameter(i, cn[icorr][ic][i].first);
         fcorr->DrawCopy("same");
 
         for (int ipar = 0; ipar < NPAR; ipar++)
@@ -1082,7 +1050,7 @@ void plot_corrfuncs()
           for (int i = 0; i < NPAR; i++)
           {
             if (i == ipar)
-              fcorr->SetParameter(i, cn[icorr][ic][i]);
+              fcorr->SetParameter(i, cn[icorr][ic][i].first);
             else
               fcorr->SetParameter(i, 0);
           }
@@ -1105,13 +1073,13 @@ void plot_corrfuncs()
 
         lc.SetTextColor(fitColor[0]);
         lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
-                                     cn[icorr][ic][0]));
+                                     cn[icorr][ic][0].first));
         lc.SetTextColor(fitColor[1]);
         lc.DrawLatex(0.45, 0.64, Form("C_{2} = % .4f",
-                                      cn[icorr][ic][1]));
+                                      cn[icorr][ic][1].first));
         lc.SetTextColor(kBlack);
         lc.DrawLatex(0.45, 0.58, Form("C_{2}/C_{1} = % .4f",
-                                      cn[icorr][ic][1] / cn[icorr][ic][0]));
+                                      cn[icorr][ic][1].first / cn[icorr][ic][0].first));
 
 
       } // ic
@@ -1153,8 +1121,6 @@ void plot_corrfuncs()
     float hi = gcn[idx][0]->GetMaximum();
     float lo = gcn[idx][0]->GetMinimum();
 
-    cout << "  C_1, " << cCorr[idx] << " lo:" << lo << " hi:" << hi << endl;
-
     if (hi > max)
       max = hi;
     if (lo < min)
@@ -1182,8 +1148,6 @@ void plot_corrfuncs()
     float hi = gcn[idx][1]->GetMaximum();
     float lo = gcn[idx][1]->GetMinimum();
 
-    cout << "  C_2, " << cCorr[idx] << " lo:" << lo << " hi:" << hi << endl;
-
     if (hi > max)
       max = hi;
     if (lo < min)
@@ -1207,8 +1171,6 @@ void plot_corrfuncs()
     int idx = corrdrawidx.at(j);
     float hi = gc2c1[idx]->GetMaximum();
     float lo = gc2c1[idx]->GetMinimum();
-
-    cout << "  C_2/C_1, " << cCorr[idx] << " lo:" << lo << " hi:" << hi << endl;
 
     if (hi > max)
       max = hi;
