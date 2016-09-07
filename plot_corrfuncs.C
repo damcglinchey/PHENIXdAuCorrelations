@@ -55,17 +55,17 @@ void plot_corrfuncs()
   // SET RUNNING CONDITIONS
   //==========================================================================//
 
-  int energy = 39;
+  int energy = 20;
 
-  bool printPlots = false;
-  bool saveHistos = false;
+  bool printPlots = true;
+  bool saveHistos = true;
   const char* outFile = "correlations.root";
-  bool printTables = true;
+  bool printTables = false;
 
   // plotting options
-  bool plot_CORRPT = false;
-  bool plot_FGBG = false;
-  bool plot_CORR = false;
+  bool plot_CORRPT = true;
+  bool plot_FGBG = true;
+  bool plot_CORR = true;
 
 
   const int NC  =  6; // number of centrality bins
@@ -121,11 +121,17 @@ void plot_corrfuncs()
                       kFullStar,
                      };
 
-  // Rebin value
-  const int REBIN = 6;
+  // Rebin values
+  // Initialize all to 4, but make some 8                   
+  vector<int> corrRebin(NCORR, 4);
+  corrRebin[BBCNBBCS] = 8;
 
-  const int NPAR = 5; // number of orders in the fourier fit
-  int fitColor[NPAR] = {kBlue, kRed, kGreen + 2, kMagenta + 2, kYellow + 2};
+  // Rebin value
+  // const int REBIN = 6;
+  // const int REBIN = 4;
+
+  const int NPAR = 4; // number of orders in the fourier fit
+  int fitColor[] = {kBlue, kRed, kGreen + 2, kMagenta + 2, kYellow + 2};
 
   //==========================================================================//
   // DECLARE VARIABLES
@@ -148,6 +154,9 @@ void plot_corrfuncs()
   TH1D* dphi_BGsum[NCORR][NC];
   TH1D* dphi_corr[NCORR][NC];
 
+  TH1D* dphi_BGsum_tot[NCORR];
+  TH1D* dphi_corr_tot[NCORR][NC];
+
   // multiplicity
   TH2D* hnpc1centrality;
   TH1D* hnpc1_cent[NC];
@@ -155,8 +164,11 @@ void plot_corrfuncs()
 
   //-- fitting
 
+  // TF1* fcorr = new TF1("fcorr",
+  //                      "1 + 2*[0]*TMath::Cos(x) + 2*[1]*TMath::Cos(2*x) + 2*[2]*TMath::Cos(3*x) + 2*[3]*TMath::Cos(4*x) + 2*[4]*TMath::Cos(5*x)",
+  //                      -1 * TMath::Pi() / 2., 3 * TMath::Pi() / 2.);
   TF1* fcorr = new TF1("fcorr",
-                       "1 + 2*[0]*TMath::Cos(x) + 2*[1]*TMath::Cos(2*x) + 2*[2]*TMath::Cos(3*x) + 2*[3]*TMath::Cos(4*x) + 2*[4]*TMath::Cos(5*x)",
+                       "1 + 2*[0]*TMath::Cos(x) + 2*[1]*TMath::Cos(2*x) + 2*[2]*TMath::Cos(3*x) + 2*[3]*TMath::Cos(4*x)",
                        -1 * TMath::Pi() / 2., 3 * TMath::Pi() / 2.);
   fcorr->SetLineColor(kBlack);
   fcorr->SetLineStyle(2);
@@ -273,7 +285,7 @@ void plot_corrfuncs()
           dphi_FG12_pt[icorr][iz][ic][ipt]->SetLineColor(kBlue);
           dphi_FG12_pt[icorr][iz][ic][ipt]->SetLineWidth(2);
           dphi_FG12_pt[icorr][iz][ic][ipt]->Sumw2();
-          dphi_FG12_pt[icorr][iz][ic][ipt]->Rebin(REBIN);
+          dphi_FG12_pt[icorr][iz][ic][ipt]->Rebin(corrRebin[icorr]);
 
 
           // BG12
@@ -297,7 +309,7 @@ void plot_corrfuncs()
           dphi_BG12_pt[icorr][iz][ic][ipt]->SetName(hname);
           dphi_BG12_pt[icorr][iz][ic][ipt]->SetLineColor(kRed);
           dphi_BG12_pt[icorr][iz][ic][ipt]->Sumw2();
-          dphi_BG12_pt[icorr][iz][ic][ipt]->Rebin(REBIN);
+          dphi_BG12_pt[icorr][iz][ic][ipt]->Rebin(corrRebin[icorr]);
 
 
           //-- sum the FG & BG (pT dependent)
@@ -336,11 +348,19 @@ void plot_corrfuncs()
                 Form("dphi_BGsum_%s_%i", cCorr[icorr], ic));
             dphi_BGsum[icorr][ic]->SetDirectory(0);
 
+            dphi_BGsum_tot[icorr] =
+              (TH1D*) dphi_BG12_pt[icorr][iz][ic][ipt]->Clone(
+                Form("dphi_BGsum_tot_%s", cCorr[icorr]));
+            dphi_BGsum_tot[icorr]->SetDirectory(0);
+
           }
           if (ipt > ptsuml && ipt <= ptsumh && iz > 0)
           {
             dphi_FGsum[icorr][ic]->Add(dphi_FG12_pt[icorr][iz][ic][ipt]);
             dphi_BGsum[icorr][ic]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
+
+            dphi_BGsum_tot[icorr]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
+
           }
 
 
@@ -368,7 +388,7 @@ void plot_corrfuncs()
         dphi_FG12[icorr][iz][ic]->SetLineColor(kBlue);
         dphi_FG12[icorr][iz][ic]->SetLineWidth(2);
         dphi_FG12[icorr][iz][ic]->Sumw2();
-        dphi_FG12[icorr][iz][ic]->Rebin(REBIN);
+        dphi_FG12[icorr][iz][ic]->Rebin(corrRebin[icorr]);
 
 
         sprintf(hname, "dphi_%s_%03i_%03i_BG12", cCorr[icorr], cl[ic], ch[ic]);
@@ -385,7 +405,7 @@ void plot_corrfuncs()
         dphi_BG12[icorr][iz][ic]->SetName(hname);
         dphi_BG12[icorr][iz][ic]->SetLineColor(kRed);
         dphi_BG12[icorr][iz][ic]->Sumw2();
-        dphi_BG12[icorr][iz][ic]->Rebin(REBIN);
+        dphi_BG12[icorr][iz][ic]->Rebin(corrRebin[icorr]);
 
 
         // Sum the FG & BG
@@ -400,11 +420,18 @@ void plot_corrfuncs()
             (TH1D*) dphi_BG12[icorr][iz][ic]->Clone(
               Form("dphi_BGsum_%s_%i", cCorr[icorr], ic));
           dphi_BGsum[icorr][ic]->SetDirectory(0);
+
+          dphi_BGsum_tot[icorr] =
+            (TH1D*) dphi_BG12[icorr][iz][ic]->Clone(
+              Form("dphi_BGsum_tot_%s", cCorr[icorr]));
+          dphi_BGsum_tot[icorr]->SetDirectory(0);
         }
         else
         {
           dphi_FGsum[icorr][ic]->Add(dphi_FG12[icorr][iz][ic]);
           dphi_BGsum[icorr][ic]->Add(dphi_BG12[icorr][iz][ic]);
+
+          dphi_BGsum_tot[icorr]->Add(dphi_BG12[icorr][iz][ic]);
         }
 
       } // icorr
@@ -509,6 +536,31 @@ void plot_corrfuncs()
         dphi_BGsum[icorr][ic]->Integral() / dphi_FGsum[icorr][ic]->Integral());
       dphi_corr[icorr][ic]->SetMarkerStyle(kOpenCircle);
       dphi_corr[icorr][ic]->SetMarkerColor(kBlack);
+    } // ic
+
+  } // icorr
+
+
+  //==========================================================================//
+  // CALCULATE THE CORRELATION FUNCTIONS WITH SUMMED BG
+  //==========================================================================//
+  cout << endl;
+  cout << "--> Calculating the correlation functions" << endl;
+
+  for (int icorr = 0; icorr < NCORR; icorr++)
+  {
+    for (int ic = 0; ic < NC; ic++)
+    {
+
+      dphi_corr_tot[icorr][ic] =
+        (TH1D*) dphi_FGsum[icorr][ic]->Clone(
+          Form("dphi_corr_tot_%i", icorr));
+      dphi_corr_tot[icorr][ic]->SetDirectory(0);
+      dphi_corr_tot[icorr][ic]->Divide(dphi_BGsum_tot[icorr]);
+      dphi_corr_tot[icorr][ic]->Scale(
+        dphi_BGsum_tot[icorr]->Integral() / dphi_FGsum[icorr][ic]->Integral());
+      dphi_corr_tot[icorr][ic]->SetMarkerStyle(kOpenCircle);
+      dphi_corr_tot[icorr][ic]->SetMarkerColor(kBlack);
     } // ic
 
   } // icorr
@@ -687,6 +739,8 @@ void plot_corrfuncs()
   cout << endl;
   cout << "--> Calcualte v2 using 3 sub-event method" << endl;
 
+  double ptshift = 0.05;
+
   //--CNT-FVTXN-FVTXS
   for (int j = 0; j < NPAR; j++)
   {
@@ -842,7 +896,7 @@ void plot_corrfuncs()
 
         //fill tgraph
         gvn_CNTBBCSFVTXS_pT[ic][j]->SetPoint(ipt,
-                                             0.5 * (ptl[ipt] + pth[ipt]),
+                                             0.5 * (ptl[ipt] + pth[ipt]) - ptshift,
                                              vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
         gvn_CNTBBCSFVTXS_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSFVTXS_pT[ic][j][ipt].second);
 
@@ -928,7 +982,7 @@ void plot_corrfuncs()
 
         //fill tgraph
         gvn_CNTBBCSFVTXN_pT[ic][j]->SetPoint(ipt,
-                                             0.5 * (ptl[ipt] + pth[ipt]),
+                                             0.5 * (ptl[ipt] + pth[ipt]) + ptshift,
                                              vn_CNTBBCSFVTXN_pT[ic][j][ipt].first);
         gvn_CNTBBCSFVTXN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSFVTXN_pT[ic][j][ipt].second);
 
@@ -1103,7 +1157,7 @@ void plot_corrfuncs()
   legv2->SetBorderSize(0);
   legv2->AddEntry(gvn_CNTFVTXSFVTXN_pT[0][0], "3 sub-event CNT-FVTXN-FVTXS", "P");
   legv2->AddEntry(gvn_CNTBBCSFVTXN_pT[0][0], "3 sub-event CNT-FVTXN-BBCS", "P");
-  legv2->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "3 sub-event CNT-BBCN-FVTXS", "P");
+  // legv2->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "3 sub-event CNT-BBCN-FVTXS", "P");
   legv2->AddEntry(gvn_CNTBBCSFVTXS_pT[0][0], "3 sub-event CNT-BBCS-FVTXS", "P");
 
 
