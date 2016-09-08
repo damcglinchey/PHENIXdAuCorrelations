@@ -55,17 +55,17 @@ void plot_corrfuncs()
   // SET RUNNING CONDITIONS
   //==========================================================================//
 
-  int energy = 20;
+  int energy = 39;
 
   bool printPlots = true;
-  bool saveHistos = true;
+  bool saveHistos = false;
   const char* outFile = "correlations.root";
   bool printTables = false;
 
   // plotting options
-  bool plot_CORRPT = true;
-  bool plot_FGBG = true;
-  bool plot_CORR = true;
+  bool plot_CORRPT = false;
+  bool plot_FGBG = false;
+  bool plot_CORR = false;
 
 
   const int NC  =  6; // number of centrality bins
@@ -122,9 +122,10 @@ void plot_corrfuncs()
                      };
 
   // Rebin values
-  // Initialize all to 4, but make some 8                   
+  // Initialize all to 4, but make some 8
   vector<int> corrRebin(NCORR, 4);
   corrRebin[BBCNBBCS] = 8;
+  corrRebin[CNTBBCN] = 8;
 
   // Rebin value
   // const int REBIN = 6;
@@ -161,6 +162,10 @@ void plot_corrfuncs()
   TH2D* hnpc1centrality;
   TH1D* hnpc1_cent[NC];
 
+  // deta
+  TH1D* deta[NCORR][NC];
+  double mdeta[NCORR][NC] = {0};
+
 
   //-- fitting
 
@@ -172,6 +177,12 @@ void plot_corrfuncs()
                        -1 * TMath::Pi() / 2., 3 * TMath::Pi() / 2.);
   fcorr->SetLineColor(kBlack);
   fcorr->SetLineStyle(2);
+
+
+  TF1* fpol = new TF1("fpol", "pol4", 0.3, 3);
+  fpol->SetLineColor(kBlack);
+  fpol->SetLineStyle(2);
+
 
   //-- cn's
   ValErr cn_pt[NCORRPT][NC][NPT][NPAR];
@@ -188,6 +199,8 @@ void plot_corrfuncs()
   TGraphErrors *gcn_pt[NCORRPT][NC][NPAR];
   TGraphErrors *gcn[NCORR][NPAR];
   TGraphErrors *gc2c1[NCORR];
+
+  TGraphErrors *gc2c1_deta[NC];
 
 
   //-- vn (3 sub-event method)
@@ -215,15 +228,31 @@ void plot_corrfuncs()
   TGraphErrors *gvn_CNTFVTXSBBCN_mult[NPAR];
   TGraphErrors *gvn_CNTFVTXSBBCN_pT[NC][NPAR];
 
+  ValErr vn_CNTBBCSBBCN_cent[NC][NPAR];
+  ValErr vn_CNTBBCSBBCN_pT[NC][NPAR][NPT];
+  TGraphErrors *gvn_CNTBBCSBBCN_cent[NPAR];
+  TGraphErrors *gvn_CNTBBCSBBCN_mult[NPAR];
+  TGraphErrors *gvn_CNTBBCSBBCN_pT[NC][NPAR];
+
   ValErr vn_num_CNTBBCSFVTXN_cent[NC][NPAR];
   TGraphErrors *gvn_num_CNTBBCSFVTXN_mult[NPAR];
 
+
+  TGraphErrors* gv2_Ron;
+  TGraphErrors* gv2fitrat_Ron;
+  TGraphErrors* gv2fitrat_CNTFVTXSFVTXN;
+  TGraphErrors* gv2fitrat_CNTBBCSFVTXS;
+  TGraphErrors* gv2fitrat_CNTBBCSFVTXN;
+  TGraphErrors* gv2fitrat_CNTFVTXSBBCN;
+  TGraphErrors* gv2fitrat_CNTBBCSBBCN;
 
 
   //-- temp stuff
   char hname[500];
   char fname[500];
 
+  TH2D* h2tmp;
+  TH1D* h1tmp;
 
   //==========================================================================//
   // GET CORRELATION HISTOGRAMS
@@ -312,6 +341,25 @@ void plot_corrfuncs()
           dphi_BG12_pt[icorr][iz][ic][ipt]->Rebin(corrRebin[icorr]);
 
 
+          // deta
+          sprintf(hname,
+                  "deta_dphi_%s_%03i_%03i_%03.0f_%03.0f_FG12",
+                  cCorr[icorr],
+                  cl[ic], ch[ic],
+                  ptl[ipt] * 100., pth[ipt] * 100);
+
+          h2tmp = (TH2D*) gROOT->FindObject(hname);
+          if (!h2tmp)
+          {
+            cout << "ERROR!! Unable to find " << hname << " for "
+                 << " ic:" << ic << " iz:" << iz << " ipt:" << ipt
+                 << endl;
+            return;
+          }
+          h1tmp = (TH1D*) h2tmp->ProjectionX("h1tmp");
+
+
+
           //-- sum the FG & BG (pT dependent)
           if (iz == 0)
           {
@@ -353,6 +401,11 @@ void plot_corrfuncs()
                 Form("dphi_BGsum_tot_%s", cCorr[icorr]));
             dphi_BGsum_tot[icorr]->SetDirectory(0);
 
+            deta[icorr][ic] =
+              (TH1D*) h1tmp->Clone(
+                Form("deta_%s_%i", cCorr[icorr], ic));
+            deta[icorr][ic]->SetDirectory(0);
+
           }
           if (ipt > ptsuml && ipt <= ptsumh && iz > 0)
           {
@@ -361,8 +414,12 @@ void plot_corrfuncs()
 
             dphi_BGsum_tot[icorr]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
 
+            deta[icorr][ic]->Add(h1tmp);
+
           }
 
+          delete h1tmp;
+          delete h2tmp;
 
         } // ipt
       } // icorr
@@ -373,6 +430,7 @@ void plot_corrfuncs()
       for (int icorr = NCORRPT; icorr < NCORR; icorr++)
       {
 
+        // FG12
         sprintf(hname, "dphi_%s_%03i_%03i_FG12", cCorr[icorr], cl[ic], ch[ic]);
         dphi_FG12[icorr][iz][ic] = (TH1D*) gROOT->FindObject(hname);
         if (!dphi_FG12[icorr][iz][ic])
@@ -391,6 +449,7 @@ void plot_corrfuncs()
         dphi_FG12[icorr][iz][ic]->Rebin(corrRebin[icorr]);
 
 
+        // BG12
         sprintf(hname, "dphi_%s_%03i_%03i_BG12", cCorr[icorr], cl[ic], ch[ic]);
         dphi_BG12[icorr][iz][ic] = (TH1D*) gROOT->FindObject(hname);
         if (!dphi_BG12[icorr][iz][ic])
@@ -407,6 +466,21 @@ void plot_corrfuncs()
         dphi_BG12[icorr][iz][ic]->Sumw2();
         dphi_BG12[icorr][iz][ic]->Rebin(corrRebin[icorr]);
 
+        // deta
+        sprintf(hname,
+                "deta_dphi_%s_%03i_%03i_FG12",
+                cCorr[icorr],
+                cl[ic], ch[ic]);
+
+        h2tmp = (TH2D*) gROOT->FindObject(hname);
+        if (!h2tmp)
+        {
+          cout << "ERROR!! Unable to find " << hname << " for "
+               << " ic:" << ic << " iz:" << iz
+               << endl;
+          return;
+        }
+        h1tmp = (TH1D*) h2tmp->ProjectionX("h1tmp");
 
         // Sum the FG & BG
         if (iz == 0)
@@ -425,6 +499,12 @@ void plot_corrfuncs()
             (TH1D*) dphi_BG12[icorr][iz][ic]->Clone(
               Form("dphi_BGsum_tot_%s", cCorr[icorr]));
           dphi_BGsum_tot[icorr]->SetDirectory(0);
+
+          deta[icorr][ic] =
+            (TH1D*) h1tmp->Clone(
+              Form("deta_%s_%i", cCorr[icorr], ic));
+          deta[icorr][ic]->SetDirectory(0);
+
         }
         else
         {
@@ -432,7 +512,12 @@ void plot_corrfuncs()
           dphi_BGsum[icorr][ic]->Add(dphi_BG12[icorr][iz][ic]);
 
           dphi_BGsum_tot[icorr]->Add(dphi_BG12[icorr][iz][ic]);
+
+          deta[icorr][ic]->Add(h1tmp);
         }
+
+        delete h1tmp;
+        delete h2tmp;
 
       } // icorr
 
@@ -491,7 +576,34 @@ void plot_corrfuncs()
 
 
 
+  //==========================================================================//
+  // CALCULTATE MEAN DELTA ETA
+  //==========================================================================//
+  cout << endl;
+  cout << "--> Calculating the mean delta eta" << endl;
 
+  for (int icorr = 0; icorr < NCORR; icorr++)
+  {
+    cout << "  " << cCorr[icorr] << endl;
+    for (int ic = 0; ic < NC; ic++)
+    {
+      mdeta[icorr][ic] = deta[icorr][ic]->GetMean();
+
+      //-- Temporary until 2D histos get fixed!!
+      if (mdeta[icorr][ic] == 0 && icorr == BBCNBBCS)
+        mdeta[icorr][ic] = 7.0;
+      if (mdeta[icorr][ic] == 0 && icorr == FVTXNFVTXS)
+        mdeta[icorr][ic] = 4.0;
+      if (mdeta[icorr][ic] == 0 && icorr == BBCNFVTXS)
+        mdeta[icorr][ic] = 5.5;
+      if (mdeta[icorr][ic] == 0 && icorr == FVTXNBBCS)
+        mdeta[icorr][ic] = 5.5;
+
+
+
+      cout << "    " << cl[ic] << "-" << ch[ic] << ": " << mdeta[icorr][ic] << endl;
+    }
+  }
 
 
 
@@ -731,6 +843,41 @@ void plot_corrfuncs()
       }
     } // ipar
   } // icorr
+
+
+  //-- C2/C1 vs deta
+  for (int ic = 0; ic < NC; ic++)
+  {
+    gc2c1_deta[ic] = new TGraphErrors();
+    gc2c1_deta[ic]->SetName(Form("gc2c1_deta_%i", ic));
+    gc2c1_deta[ic]->SetMarkerStyle(kFullCircle);
+    gc2c1_deta[ic]->SetMarkerColor(kBlue);
+    gc2c1_deta[ic]->SetLineColor(kBlue);
+    gc2c1_deta[ic]->SetTitle(";#Delta#eta;-C_{2}/C_{1}");
+
+    int ip = 0;
+    for (int icorr = 0; icorr < NCORRPT; icorr++)
+    {
+      // if (icorr == BBCNFVTXS ||
+      //     icorr == CNTBBCN)
+      //   continue;
+
+      double c2c1 = -1 * cn[icorr][ic][1].first / cn[icorr][ic][0].first;
+      double unc = 0;
+      unc += TMath::Power(cn[icorr][ic][0].second / cn[icorr][ic][0].first, 2);
+      unc += TMath::Power(cn[icorr][ic][1].second / cn[icorr][ic][1].first, 2);
+      unc = c2c1 * TMath::Sqrt(unc);
+
+      gc2c1_deta[ic]->SetPoint(ip, -1 * mdeta[icorr][ic], c2c1);
+      gc2c1_deta[ic]->SetPointError(ip, 0, unc);
+      ip++;
+
+      if (c2c1 < gc2c1_deta[ic]->GetMinimum())
+        gc2c1_deta[ic]->SetMinimum(c2c1);
+      if (c2c1 > gc2c1_deta[ic]->GetMaximum())
+        gc2c1_deta[ic]->SetMaximum(c2c1);
+    }
+  }
 
 
   //==========================================================================//
@@ -1087,6 +1234,94 @@ void plot_corrfuncs()
 
 
 
+  //--CNT-BBCS-FVTXN
+  for (int j = 0; j < NPAR; j++)
+  {
+    // centrality dependence
+    gvn_CNTBBCSBBCN_cent[j] = new TGraphErrors();
+    sprintf(hname, "gv%i_dAu%i_CNTBBCSBBCN_cent", j + 1, energy);
+    gvn_CNTBBCSBBCN_cent[j]->SetName(hname);
+    gvn_CNTBBCSBBCN_cent[j]->SetMarkerStyle(kOpenCircle);
+    gvn_CNTBBCSBBCN_cent[j]->SetMarkerColor(kOrange + 2);
+    gvn_CNTBBCSBBCN_cent[j]->SetLineColor(kOrange + 2);
+    gvn_CNTBBCSBBCN_cent[j]->SetMinimum(100);
+
+    // multiplicity dependence
+    gvn_CNTBBCSBBCN_mult[j] = new TGraphErrors();
+    sprintf(hname, "gv%i_dAu%i_CNTBBCSBBCN_mult", j + 1, energy);
+    gvn_CNTBBCSBBCN_mult[j]->SetName(hname);
+    gvn_CNTBBCSBBCN_mult[j]->SetMarkerStyle(kOpenCircle);
+    gvn_CNTBBCSBBCN_mult[j]->SetMarkerColor(kOrange + 2);
+    gvn_CNTBBCSBBCN_mult[j]->SetLineColor(kOrange + 2);
+    gvn_CNTBBCSBBCN_mult[j]->SetMinimum(100);
+
+    for (int ic = 0; ic < NC; ic++)
+    {
+
+      vn_CNTBBCSBBCN_cent[ic][j] = vn_3sub(
+                                     cn[CNTBBCS][ic][j],
+                                     cn[CNTBBCN][ic][j],
+                                     cn[BBCNBBCS][ic][j] );
+
+      //fill centrality tgraph
+      gvn_CNTBBCSBBCN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSBBCN_cent[ic][j].first);
+      gvn_CNTBBCSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTBBCSBBCN_cent[ic][j].second);
+
+      if (vn_CNTBBCSBBCN_cent[ic][j].first > gvn_CNTBBCSBBCN_cent[j]->GetMaximum())
+        gvn_CNTBBCSBBCN_cent[j]->SetMaximum(vn_CNTBBCSBBCN_cent[ic][j].first);
+      if (vn_CNTBBCSBBCN_cent[ic][j].first < gvn_CNTBBCSBBCN_cent[j]->GetMinimum())
+        gvn_CNTBBCSBBCN_cent[j]->SetMinimum(vn_CNTBBCSBBCN_cent[ic][j].first);
+
+      //fill multiplicity tgraph
+      gvn_CNTBBCSBBCN_mult[j]->SetPoint(ic,
+                                        mean_npc1[ic].first,
+                                        vn_CNTBBCSBBCN_cent[ic][j].first);
+      gvn_CNTBBCSBBCN_mult[j]->SetPointError(ic, 0, vn_CNTBBCSBBCN_cent[ic][j].second);
+
+      if (vn_CNTBBCSBBCN_cent[ic][j].first > gvn_CNTBBCSBBCN_mult[j]->GetMaximum())
+        gvn_CNTBBCSBBCN_mult[j]->SetMaximum(vn_CNTBBCSBBCN_cent[ic][j].first);
+      if (vn_CNTBBCSBBCN_cent[ic][j].first < gvn_CNTBBCSBBCN_mult[j]->GetMinimum())
+        gvn_CNTBBCSBBCN_mult[j]->SetMinimum(vn_CNTBBCSBBCN_cent[ic][j].first);
+
+    }
+
+    //pT dependence
+    for (int ic = 0; ic < NC; ic++)
+    {
+      gvn_CNTBBCSBBCN_pT[ic][j] = new TGraphErrors();
+      sprintf(hname, "gv%i_dAu%i_CNTBBCSBBCN_pT_c%i", j + 1, energy, ic);
+      gvn_CNTBBCSBBCN_pT[ic][j]->SetName(hname);
+      gvn_CNTBBCSBBCN_pT[ic][j]->SetMarkerStyle(kOpenCircle);
+      gvn_CNTBBCSBBCN_pT[ic][j]->SetMarkerColor(kOrange + 2);
+      gvn_CNTBBCSBBCN_pT[ic][j]->SetLineColor(kOrange + 2);
+      gvn_CNTBBCSBBCN_pT[ic][j]->SetMinimum(100);
+
+      for (int ipt = 0; ipt < NPT; ipt++)
+      {
+        vn_CNTBBCSBBCN_pT[ic][j][ipt] = vn_3sub(
+                                          cn_pt[CNTBBCS][ic][ipt][j],
+                                          cn_pt[CNTBBCN][ic][ipt][j],
+                                          cn[BBCNBBCS][ic][j] );
+
+        //fill tgraph
+        gvn_CNTBBCSBBCN_pT[ic][j]->SetPoint(ipt,
+                                            0.5 * (ptl[ipt] + pth[ipt]) + ptshift,
+                                            vn_CNTBBCSBBCN_pT[ic][j][ipt].first);
+        gvn_CNTBBCSBBCN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSBBCN_pT[ic][j][ipt].second);
+
+        if (vn_CNTBBCSBBCN_pT[ic][j][ipt].first > gvn_CNTBBCSBBCN_pT[ic][j]->GetMaximum())
+          gvn_CNTBBCSBBCN_pT[ic][j]->SetMaximum(vn_CNTBBCSBBCN_pT[ic][j][ipt].first);
+        if (vn_CNTBBCSBBCN_pT[ic][j][ipt].first < gvn_CNTBBCSBBCN_pT[ic][j]->GetMinimum())
+          gvn_CNTBBCSBBCN_pT[ic][j]->SetMinimum(vn_CNTBBCSBBCN_pT[ic][j][ipt].first);
+
+      }
+
+    }
+  } // j
+
+
+
+
   //--CNT-BBCS-FVTXN (numerical C_n's)
   for (int j = 0; j < NPAR; j++)
   {
@@ -1120,6 +1355,135 @@ void plot_corrfuncs()
 
     } // ic
   } // j
+
+  //==========================================================================//
+  // GET RON'S EP METHOD, FIT IT, AND TAKE RATIOS TO FIT
+  //==========================================================================//
+  if (energy > 20)
+  {
+    //-- Difine TGraph
+    gv2_Ron = new TGraphErrors();
+    gv2_Ron->SetMarkerStyle(kFullCircle);
+    gv2_Ron->SetMarkerColor(kBlack);
+    gv2_Ron->SetLineColor(kBlack);
+
+
+    if ( energy == 200 )
+    {
+      for (int i = 0; i < Ron_v2_dAu200_N; i++)
+      {
+        gv2_Ron->SetPoint(i, Ron_v2_dAu200_pT[i], Ron_v2_dAu200_v2[i]);
+        gv2_Ron->SetPointError(i, 0, Ron_v2_dAu200_v2e[i]);
+      }
+    }
+    if ( energy == 62 )
+    {
+      for (int i = 0; i < Ron_v2_dAu62_N; i++)
+      {
+        gv2_Ron->SetPoint(i, Ron_v2_dAu62_pT[i], Ron_v2_dAu62_v2[i]);
+        gv2_Ron->SetPointError(i, 0, Ron_v2_dAu62_v2e[i]);
+      }
+    }
+    if ( energy == 39 )
+    {
+      for (int i = 0; i < Ron_v2_dAu39_N; i++)
+      {
+        gv2_Ron->SetPoint(i, Ron_v2_dAu39_pT[i], Ron_v2_dAu39_v2[i]);
+        gv2_Ron->SetPointError(i, 0, Ron_v2_dAu39_v2e[i]);
+      }
+    }
+
+    //-- Fit
+    gv2_Ron->Fit(fpol, "RQ0N");
+
+
+    //-- Ratios
+    double x, y;
+
+    gv2fitrat_Ron = (TGraphErrors*) gv2_Ron->Clone("gv2fitrat_Ron");
+    for (int i = 0; i < gv2fitrat_Ron->GetN(); i++)
+    {
+      gv2fitrat_Ron->GetPoint(i, x, y);
+      gv2fitrat_Ron->SetPoint(i, x,
+                              y / fpol->Eval(x));
+      gv2fitrat_Ron->SetPointError(i, 0,
+                                   gv2fitrat_Ron->GetErrorY(i) / fpol->Eval(x));
+    }
+
+
+    gv2fitrat_CNTFVTXSFVTXN =
+      (TGraphErrors*) gvn_CNTFVTXSFVTXN_pT[0][1]->Clone(
+        "gv2fitrat_CNTFVTXSFVTXN");
+    for (int i = 0; i < gv2fitrat_CNTFVTXSFVTXN->GetN(); i++)
+    {
+      gv2fitrat_CNTFVTXSFVTXN->GetPoint(i, x, y);
+      y = y / fpol->Eval(x);
+      double ey = gv2fitrat_CNTFVTXSFVTXN->GetErrorY(i) / fpol->Eval(x);
+
+      gv2fitrat_CNTFVTXSFVTXN->SetPoint(i, x, y);
+      gv2fitrat_CNTFVTXSFVTXN->SetPointError(i, 0, ey);
+    }
+
+
+    gv2fitrat_CNTBBCSFVTXS =
+      (TGraphErrors*) gvn_CNTBBCSFVTXS_pT[0][1]->Clone(
+        "gv2fitrat_CNTBBCSFVTXS");
+    for (int i = 0; i < gv2fitrat_CNTBBCSFVTXS->GetN(); i++)
+    {
+      gv2fitrat_CNTBBCSFVTXS->GetPoint(i, x, y);
+      y = y / fpol->Eval(x);
+      double ey = gv2fitrat_CNTBBCSFVTXS->GetErrorY(i) / fpol->Eval(x);
+
+      gv2fitrat_CNTBBCSFVTXS->SetPoint(i, x, y);
+      gv2fitrat_CNTBBCSFVTXS->SetPointError(i, 0, ey);
+    }
+
+
+    gv2fitrat_CNTFVTXSBBCN =
+      (TGraphErrors*) gvn_CNTFVTXSBBCN_pT[0][1]->Clone(
+        "gv2fitrat_CNTFVTXSBBCN");
+    for (int i = 0; i < gv2fitrat_CNTFVTXSBBCN->GetN(); i++)
+    {
+      gv2fitrat_CNTFVTXSBBCN->GetPoint(i, x, y);
+      y = y / fpol->Eval(x);
+      double ey = gv2fitrat_CNTFVTXSBBCN->GetErrorY(i) / fpol->Eval(x);
+
+      gv2fitrat_CNTFVTXSBBCN->SetPoint(i, x, y);
+      gv2fitrat_CNTFVTXSBBCN->SetPointError(i, 0, ey);
+    }
+
+    gv2fitrat_CNTBBCSFVTXN =
+      (TGraphErrors*) gvn_CNTBBCSFVTXN_pT[0][1]->Clone(
+        "gv2fitrat_CNTBBCSFVTXN");
+    for (int i = 0; i < gv2fitrat_CNTBBCSFVTXN->GetN(); i++)
+    {
+      gv2fitrat_CNTBBCSFVTXN->GetPoint(i, x, y);
+      y = y / fpol->Eval(x);
+      double ey = gv2fitrat_CNTBBCSFVTXN->GetErrorY(i) / fpol->Eval(x);
+
+      gv2fitrat_CNTBBCSFVTXN->SetPoint(i, x, y);
+      gv2fitrat_CNTBBCSFVTXN->SetPointError(i, 0, ey);
+    }
+
+    gv2fitrat_CNTBBCSBBCN =
+      (TGraphErrors*) gvn_CNTBBCSBBCN_pT[0][1]->Clone(
+        "gv2fitrat_CNTBBCSBBCN");
+    for (int i = 0; i < gv2fitrat_CNTBBCSBBCN->GetN(); i++)
+    {
+      gv2fitrat_CNTBBCSBBCN->GetPoint(i, x, y);
+      y = y / fpol->Eval(x);
+      double ey = gv2fitrat_CNTBBCSBBCN->GetErrorY(i) / fpol->Eval(x);
+
+      gv2fitrat_CNTBBCSBBCN->SetPoint(i, x, y);
+      gv2fitrat_CNTBBCSBBCN->SetPointError(i, 0, ey);
+    }
+
+
+
+
+
+
+  }
 
 
   //==========================================================================//
@@ -1157,7 +1521,11 @@ void plot_corrfuncs()
   legv2->SetBorderSize(0);
   legv2->AddEntry(gvn_CNTFVTXSFVTXN_pT[0][0], "3 sub-event CNT-FVTXN-FVTXS", "P");
   legv2->AddEntry(gvn_CNTBBCSFVTXN_pT[0][0], "3 sub-event CNT-FVTXN-BBCS", "P");
-  // legv2->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "3 sub-event CNT-BBCN-FVTXS", "P");
+  if (energy == 200)
+  {
+    legv2->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "3 sub-event CNT-BBCN-FVTXS", "P");
+    legv2->AddEntry(gvn_CNTBBCSBBCN_pT[0][0], "3 sub-event CNT-BBCN-BBCS", "P");
+  }
   legv2->AddEntry(gvn_CNTBBCSFVTXS_pT[0][0], "3 sub-event CNT-BBCS-FVTXS", "P");
 
 
@@ -1630,48 +1998,12 @@ void plot_corrfuncs()
   gvn_CNTBBCSFVTXN_pT[0][1]->Draw("P");
   gvn_CNTBBCSFVTXS_pT[0][1]->Draw("P");
   gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
+  gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
 
-  if ( energy == 200 )
+  if ( energy > 20 )
   {
-    TGraphErrors * gv2_Ron_dAu200 = new TGraphErrors();
-    gv2_Ron_dAu200->SetMarkerStyle(kFullCircle);
-    gv2_Ron_dAu200->SetMarkerColor(kBlack);
-    gv2_Ron_dAu200->SetLineColor(kBlack);
-    for (int i = 0; i < Ron_v2_dAu200_N; i++)
-    {
-      gv2_Ron_dAu200->SetPoint(i, Ron_v2_dAu200_pT[i], Ron_v2_dAu200_v2[i]);
-      gv2_Ron_dAu200->SetPointError(i, 0, Ron_v2_dAu200_v2e[i]);
-    }
-    gv2_Ron_dAu200->Draw("P");
-    legv2->AddEntry(gv2_Ron_dAu200, "FVTXS EP (Ron)", "P");
-  }
-  if ( energy == 62 )
-  {
-    TGraphErrors * gv2_Ron_dAu62 = new TGraphErrors();
-    gv2_Ron_dAu62->SetMarkerStyle(kFullCircle);
-    gv2_Ron_dAu62->SetMarkerColor(kBlack);
-    gv2_Ron_dAu62->SetLineColor(kBlack);
-    for (int i = 0; i < Ron_v2_dAu62_N; i++)
-    {
-      gv2_Ron_dAu62->SetPoint(i, Ron_v2_dAu62_pT[i], Ron_v2_dAu62_v2[i]);
-      gv2_Ron_dAu62->SetPointError(i, 0, Ron_v2_dAu62_v2e[i]);
-    }
-    gv2_Ron_dAu62->Draw("P");
-    legv2->AddEntry(gv2_Ron_dAu62, "FVTXS EP (Ron)", "P");
-  }
-  if ( energy == 39 )
-  {
-    TGraphErrors * gv2_Ron_dAu39 = new TGraphErrors();
-    gv2_Ron_dAu39->SetMarkerStyle(kFullCircle);
-    gv2_Ron_dAu39->SetMarkerColor(kBlack);
-    gv2_Ron_dAu39->SetLineColor(kBlack);
-    for (int i = 0; i < Ron_v2_dAu39_N; i++)
-    {
-      gv2_Ron_dAu39->SetPoint(i, Ron_v2_dAu39_pT[i], Ron_v2_dAu39_v2[i]);
-      gv2_Ron_dAu39->SetPointError(i, 0, Ron_v2_dAu39_v2e[i]);
-    }
-    gv2_Ron_dAu39->Draw("P");
-    legv2->AddEntry(gv2_Ron_dAu39, "FVTXS EP (Ron)", "P");
+    gv2_Ron->Draw("P");
+    legv2->AddEntry(gv2_Ron, "FVTXS EP (Ron)", "P");
   }
 
   ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
@@ -1692,6 +2024,7 @@ void plot_corrfuncs()
   gvn_CNTBBCSFVTXS_cent[1]->Draw("P");
   gvn_CNTBBCSFVTXN_cent[1]->Draw("P");
   gvn_CNTFVTXSBBCN_cent[1]->Draw("P");
+  gvn_CNTBBCSBBCN_cent[1]->Draw("P");
 
   le.DrawLatex(0.15, 0.86, Form("%.1f<p_{T}^{trig} [GeV/c]<%.1f",
                                 ptl[ptsuml], pth[ptsumh]));
@@ -1718,6 +2051,127 @@ void plot_corrfuncs()
   gvn_CNTBBCSFVTXN_mult[1]->GetYaxis()->SetRangeUser(0, 0.30);
   gvn_CNTBBCSFVTXN_mult[1]->Draw("AP");
   gvn_num_CNTBBCSFVTXN_mult[1]->Draw("P");
+
+
+  TCanvas* cdeta = new TCanvas("cdeta", "deta", 800, 600);
+
+  cdeta->cd(1);
+  if (gc2c1_deta[0]->GetMinimum() > 0)
+    gc2c1_deta[0]->SetMinimum(0);
+  gc2c1_deta[0]->SetMaximum(1.1 * gc2c1_deta[0]->GetMaximum());
+
+  gc2c1_deta[0]->Draw("AP");
+
+  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+
+
+
+
+
+  TCanvas *cv2ptfitrat;
+  if (energy > 20)
+  {
+    cv2ptfitrat = new TCanvas("cv2ptfitrat", "v2 pT fit rat", 600, 700);
+    cv2ptfitrat->SetTopMargin(0);
+    cv2ptfitrat->SetRightMargin(0);
+    cv2ptfitrat->SetBottomMargin(0);
+    cv2ptfitrat->SetLeftMargin(0);
+    // cv2ptfitrat->Divide(1, 2, 0, 0);
+
+    // cv2ptfitrat->GetPad(1)->SetTopMargin(0.12);
+    // cv2ptfitrat->GetPad(1)->SetRightMargin(0.02);
+    // cv2ptfitrat->GetPad(1)->SetBottomMargin(0.0);
+    // cv2ptfitrat->GetPad(1)->SetLeftMargin(0.12);
+    // cv2ptfitrat->GetPad(1)->SetTicks(1, 1);
+
+    // cv2ptfitrat->GetPad(2)->SetTopMargin(0.0);
+    // cv2ptfitrat->GetPad(2)->SetRightMargin(0.02);
+    // cv2ptfitrat->GetPad(2)->SetBottomMargin(0.12);
+    // cv2ptfitrat->GetPad(2)->SetLeftMargin(0.12);
+    // cv2ptfitrat->GetPad(2)->SetTicks(1, 1);
+
+
+    //-- v2
+    // cv2ptfitrat->cd(1);
+    TPad *pv2 = new TPad("pv2", "v2", 0, 0.4, 1, 1);
+    pv2->SetTopMargin(0.10);
+    pv2->SetRightMargin(0.02);
+    pv2->SetBottomMargin(0.0);
+    pv2->SetLeftMargin(0.12);
+    pv2->SetTicks(1, 1);
+    pv2->Draw();
+    pv2->cd();
+
+    gvn_CNTFVTXSFVTXN_pT[0][1]->SetMinimum(0.01);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->SetMaximum(0.24);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetXaxis()->SetRangeUser(0, 3);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->SetTitle(";p_{T} [GeV/c];v_{2}");
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->CenterTitle();
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetTitleFont(63);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetTitleSize(20);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetTitleOffset(1.7);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetLabelFont(63);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetLabelSize(14);
+    gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("AP");
+
+    gvn_CNTBBCSFVTXN_pT[0][1]->Draw("P");
+    gvn_CNTBBCSFVTXS_pT[0][1]->Draw("P");
+    if (energy == 200)
+    {
+      gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
+      gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
+    }
+
+    gv2_Ron->Draw("P");
+    fpol->Draw("same");
+
+    ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+    legv2->Draw("same");
+
+    //-- Ratio to fit
+    // cv2ptfitrat->cd(2);
+    cv2ptfitrat->cd();
+    TPad *prat = new TPad("prat", "rat", 0, 0, 1, 0.4);
+    prat->SetTopMargin(0.0);
+    prat->SetRightMargin(0.02);
+    prat->SetBottomMargin(0.18);
+    prat->SetLeftMargin(0.12);
+    prat->SetTicks(1, 1);
+    prat->Draw();
+    prat->cd();
+
+    gv2fitrat_CNTFVTXSFVTXN->SetMinimum(0.51);
+    gv2fitrat_CNTFVTXSFVTXN->SetMaximum(1.49);
+    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetRangeUser(0, 3);
+    gv2fitrat_CNTFVTXSFVTXN->SetTitle(";p_{T} [GeV/c];v_{2} / fit");
+    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetTitleFont(63);
+    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetTitleSize(20);
+    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetTitleOffset(1.7);
+    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetLabelFont(63);
+    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetLabelSize(14);
+    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->CenterTitle();
+    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetTitleFont(63);
+    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetTitleSize(20);
+    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetTitleOffset(2.0);
+    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetLabelFont(63);
+    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetLabelSize(14);
+    gv2fitrat_CNTFVTXSFVTXN->Draw("AP");
+
+    gv2fitrat_CNTBBCSFVTXN->Draw("P");
+    gv2fitrat_CNTBBCSFVTXS->Draw("P");
+    if (energy == 200)
+    {
+      gv2fitrat_CNTFVTXSBBCN->Draw("P");
+      gv2fitrat_CNTBBCSBBCN->Draw("P");
+    }
+
+    gv2fitrat_Ron->Draw("P");
+
+    l1.DrawLine(0, 1, 3, 1);
+
+  }
+
+
 
 
 
@@ -1777,6 +2231,10 @@ void plot_corrfuncs()
 
     sprintf(cname, "pdfs/dAu%i_v2.pdf", energy);
     cv2->Print(cname);
+
+    sprintf(cname, "pdfs/dAu%u_v2pT_fitrat.pdf", energy);
+    cv2ptfitrat->Print(cname);
+
   } // printPlots
 
   //==========================================================================//
@@ -1843,6 +2301,11 @@ void plot_corrfuncs()
       gvn_CNTBBCSFVTXS_mult[ipar]->Write();
       gvn_CNTBBCSFVTXN_mult[ipar]->Write();
     }
+
+    //-- c2/c1
+    sprintf(hname, "gc2c1_deta_dAu%i_c0", energy);
+    gc2c1_deta[0]->SetName(hname);
+    gc2c1_deta[0]->Write();
 
 
     fout->Close();
@@ -1929,7 +2392,7 @@ void plot_corrfuncs()
          << setw(10) << "$v_{2}$(CNT--BBCN--FVTXS)" << " & "
          << setw(10) << "$v_{2}$(CNT--BBCS--FVTXS)" << " \\\\"
          << endl;
-      cout << "\\hline" << endl;
+    cout << "\\hline" << endl;
     for (int ic = 0; ic < NC; ic++)
     {
       for (int ipt = 0; ipt < NPT; ipt++)
@@ -1958,7 +2421,7 @@ void plot_corrfuncs()
          << setw(10) << "$v_{2}$(CNT--BBCN--FVTXS)" << " & "
          << setw(10) << "$v_{2}$(CNT--BBCS--FVTXS)" << " \\\\"
          << endl;
-      cout << "\\hline" << endl;
+    cout << "\\hline" << endl;
     for (int ic = 0; ic < NC; ic++)
     {
       cout << setw(5) << energy << " & "
@@ -1970,7 +2433,7 @@ void plot_corrfuncs()
            << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSFVTXS_cent[ic][1].first, vn_CNTBBCSFVTXS_cent[ic][1].second) << " \\\\ "
            << endl;
     }
-      cout << "\\hline" << endl;
+    cout << "\\hline" << endl;
 
   } // if (printTables)
 
@@ -2050,7 +2513,7 @@ ValErr calc_cn(TH1D* hcorr, int order)
 
   }
   val = val / tot;
-  err = err / tot;
+  err = TMath::Sqrt(err) / tot;
 
   return make_pair(val, err);
 }
