@@ -57,7 +57,7 @@ void plot_corrfuncs()
 
   int energy = 39;
 
-  bool printPlots = true;
+  bool printPlots = false;
   bool saveHistos = false;
   const char* outFile = "correlations.root";
   bool printTables = false;
@@ -126,10 +126,6 @@ void plot_corrfuncs()
   vector<int> corrRebin(NCORR, 4);
   corrRebin[BBCNBBCS] = 8;
   corrRebin[CNTBBCN] = 8;
-
-  // Rebin value
-  // const int REBIN = 6;
-  // const int REBIN = 4;
 
   const int NPAR = 4; // number of orders in the fourier fit
   int fitColor[] = {kBlue, kRed, kGreen + 2, kMagenta + 2, kYellow + 2};
@@ -886,7 +882,8 @@ void plot_corrfuncs()
   cout << endl;
   cout << "--> Calcualte v2 using 3 sub-event method" << endl;
 
-  double ptshift = 0.05;
+  double ptshift = 0.02;
+  double cshift  = 0.05;
 
   //--CNT-FVTXN-FVTXS
   for (int j = 0; j < NPAR; j++)
@@ -1002,7 +999,7 @@ void plot_corrfuncs()
                                       cn[BBCSFVTXS][ic][j] );
 
       //fill centrality tgraph
-      gvn_CNTBBCSFVTXS_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXS_cent[ic][j].first);
+      gvn_CNTBBCSFVTXS_cent[j]->SetPoint(ic, ic + 0.5 - cshift, vn_CNTBBCSFVTXS_cent[ic][j].first);
       gvn_CNTBBCSFVTXS_cent[j]->SetPointError(ic, 0, vn_CNTBBCSFVTXS_cent[ic][j].second);
 
       if (vn_CNTBBCSFVTXS_cent[ic][j].first > gvn_CNTBBCSFVTXS_cent[j]->GetMaximum())
@@ -1088,7 +1085,7 @@ void plot_corrfuncs()
                                       cn[FVTXNBBCS][ic][j] );
 
       //fill centrality tgraph
-      gvn_CNTBBCSFVTXN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSFVTXN_cent[ic][j].first);
+      gvn_CNTBBCSFVTXN_cent[j]->SetPoint(ic, ic + 0.5 + cshift, vn_CNTBBCSFVTXN_cent[ic][j].first);
       gvn_CNTBBCSFVTXN_cent[j]->SetPointError(ic, 0, vn_CNTBBCSFVTXN_cent[ic][j].second);
 
       if (vn_CNTBBCSFVTXN_cent[ic][j].first > gvn_CNTBBCSFVTXN_cent[j]->GetMaximum())
@@ -1176,7 +1173,7 @@ void plot_corrfuncs()
                                       cn[BBCNFVTXS][ic][j] );
 
       //fill centrality tgraph
-      gvn_CNTFVTXSBBCN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTFVTXSBBCN_cent[ic][j].first);
+      gvn_CNTFVTXSBBCN_cent[j]->SetPoint(ic, ic + 0.5 - 2*cshift, vn_CNTFVTXSBBCN_cent[ic][j].first);
       gvn_CNTFVTXSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTFVTXSBBCN_cent[ic][j].second);
 
       if (vn_CNTFVTXSBBCN_cent[ic][j].first > gvn_CNTFVTXSBBCN_cent[j]->GetMaximum())
@@ -1217,7 +1214,7 @@ void plot_corrfuncs()
 
         //fill tgraph
         gvn_CNTFVTXSBBCN_pT[ic][j]->SetPoint(ipt,
-                                             0.5 * (ptl[ipt] + pth[ipt]),
+                                             0.5 * (ptl[ipt] + pth[ipt]) - 2 * ptshift,
                                              vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
         gvn_CNTFVTXSBBCN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTFVTXSBBCN_pT[ic][j][ipt].second);
 
@@ -1264,7 +1261,7 @@ void plot_corrfuncs()
                                      cn[BBCNBBCS][ic][j] );
 
       //fill centrality tgraph
-      gvn_CNTBBCSBBCN_cent[j]->SetPoint(ic, ic + 0.5, vn_CNTBBCSBBCN_cent[ic][j].first);
+      gvn_CNTBBCSBBCN_cent[j]->SetPoint(ic, ic + 0.5 + 2*cshift, vn_CNTBBCSBBCN_cent[ic][j].first);
       gvn_CNTBBCSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTBBCSBBCN_cent[ic][j].second);
 
       if (vn_CNTBBCSBBCN_cent[ic][j].first > gvn_CNTBBCSBBCN_cent[j]->GetMaximum())
@@ -1305,7 +1302,7 @@ void plot_corrfuncs()
 
         //fill tgraph
         gvn_CNTBBCSBBCN_pT[ic][j]->SetPoint(ipt,
-                                            0.5 * (ptl[ipt] + pth[ipt]) + ptshift,
+                                            0.5 * (ptl[ipt] + pth[ipt]) + 2* ptshift,
                                             vn_CNTBBCSBBCN_pT[ic][j][ipt].first);
         gvn_CNTBBCSBBCN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSBBCN_pT[ic][j][ipt].second);
 
@@ -1516,6 +1513,16 @@ void plot_corrfuncs()
   for (vector<int>::size_type j = 0; j < corrdrawidx.size(); j++)
     legcn->AddEntry(gcn[corrdrawidx.at(j)][0], cCorr[corrdrawidx.at(j)], "P");
 
+  TLegend *leg3sub = new TLegend(0.15, 0.6, 0.6, 0.88);
+  leg3sub->SetFillStyle(0);
+  leg3sub->SetBorderSize(0);
+  leg3sub->AddEntry(gvn_CNTFVTXSFVTXN_pT[0][0], "CNT--FVTXN--FVTXS", "P");
+  leg3sub->AddEntry(gvn_CNTBBCSFVTXN_pT[0][0], "CNT--FVTXN--BBCS", "P");
+  leg3sub->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "CNT--BBCN--FVTXS", "P");
+  leg3sub->AddEntry(gvn_CNTBBCSBBCN_pT[0][0], "CNT--BBCN--BBCS", "P");
+  leg3sub->AddEntry(gvn_CNTBBCSFVTXS_pT[0][0], "CNT--BBCS--FVTXS", "P");
+
+
   TLegend *legv2 = new TLegend(0.15, 0.6, 0.6, 0.88);
   legv2->SetFillStyle(0);
   legv2->SetBorderSize(0);
@@ -1527,19 +1534,62 @@ void plot_corrfuncs()
     legv2->AddEntry(gvn_CNTBBCSBBCN_pT[0][0], "3 sub-event CNT-BBCN-BBCS", "P");
   }
   legv2->AddEntry(gvn_CNTBBCSFVTXS_pT[0][0], "3 sub-event CNT-BBCS-FVTXS", "P");
+  if (energy > 20)
+    legv2->AddEntry(gv2_Ron, "FVTXS EP (Ron)", "P");
 
 
   TH1F* haxis_cncent = new TH1F("haxis_cncent", "", NC, 0, NC);
   haxis_cncent->GetYaxis()->CenterTitle();
-  haxis_cncent->GetYaxis()->SetTitleSize(0.08);
-  haxis_cncent->GetYaxis()->SetTitleOffset(0.75);
-  haxis_cncent->GetXaxis()->SetLabelSize(0.08);
+  haxis_cncent->GetYaxis()->SetTitleFont(63);
+  haxis_cncent->GetYaxis()->SetTitleSize(20);
+  haxis_cncent->GetYaxis()->SetTitleOffset(1.7);
+  haxis_cncent->GetYaxis()->SetLabelFont(63);
+  haxis_cncent->GetYaxis()->SetLabelSize(14);
+  haxis_cncent->GetXaxis()->SetTitleFont(63);
+  haxis_cncent->GetXaxis()->SetTitleSize(20);
+  haxis_cncent->GetXaxis()->SetTitleOffset(1.7);
+  haxis_cncent->GetXaxis()->SetLabelFont(63);
+  haxis_cncent->GetXaxis()->SetLabelSize(14);
 
   for (int ibin = 1; ibin <= haxis_cncent->GetNbinsX(); ibin++)
   {
     sprintf(ctitle, "%i - %i%%", cl[ibin - 1], ch[ibin - 1]);
     haxis_cncent->GetXaxis()->SetBinLabel(ibin, ctitle);
   }
+
+
+  TH1F* haxis_vnpt = new TH1F("haxis_vnpt", ";p_{T} [GeV/c];v_{2}", 100, 0, 5);
+  haxis_vnpt->SetMinimum(0.01);
+  haxis_vnpt->SetMaximum(0.29);
+  haxis_vnpt->GetYaxis()->CenterTitle();
+  haxis_vnpt->GetYaxis()->SetTitleFont(63);
+  haxis_vnpt->GetYaxis()->SetTitleSize(20);
+  haxis_vnpt->GetYaxis()->SetTitleOffset(1.7);
+  haxis_vnpt->GetYaxis()->SetLabelFont(63);
+  haxis_vnpt->GetYaxis()->SetLabelSize(14);
+  haxis_vnpt->GetXaxis()->SetTitleFont(63);
+  haxis_vnpt->GetXaxis()->SetTitleSize(20);
+  haxis_vnpt->GetXaxis()->SetTitleOffset(1.7);
+  haxis_vnpt->GetXaxis()->SetLabelFont(63);
+  haxis_vnpt->GetXaxis()->SetLabelSize(14);
+
+  TH1F* haxis_ratpt = new TH1F("haxis_ratpt", ";p_{T} [GeV/c];v_{2} / fit", 100, 0, 5);
+  haxis_ratpt->SetMinimum(0.01);
+  haxis_ratpt->SetMaximum(0.29);
+  haxis_ratpt->GetYaxis()->CenterTitle();
+  haxis_ratpt->GetYaxis()->SetTitleFont(63);
+  haxis_ratpt->GetYaxis()->SetTitleSize(20);
+  haxis_ratpt->GetYaxis()->SetTitleOffset(1.7);
+  haxis_ratpt->GetYaxis()->SetLabelFont(63);
+  haxis_ratpt->GetYaxis()->SetLabelSize(14);
+  haxis_ratpt->GetXaxis()->SetTitleFont(63);
+  haxis_ratpt->GetXaxis()->SetTitleSize(20);
+  haxis_ratpt->GetXaxis()->SetTitleOffset(1.7);
+  haxis_ratpt->GetXaxis()->SetLabelFont(63);
+  haxis_ratpt->GetXaxis()->SetLabelSize(14);
+
+
+
 
   float min, max;
 
@@ -1934,12 +1984,10 @@ void plot_corrfuncs()
 
   for (int j = 1; j < 3; j++)
   {
-    cvncent->cd(j + 1);
+    cvncent->cd(j);
     haxis_cncent->SetMinimum(0.0);
     haxis_cncent->SetMaximum(0.24);
     haxis_cncent->SetTitle(Form(";;v_{%i}", j + 1));
-    haxis_cncent->GetYaxis()->SetTitleSize(0.06);
-    haxis_cncent->GetXaxis()->SetLabelSize(0.06);
     haxis_cncent->DrawCopy();
 
     gvn_CNTFVTXSFVTXN_cent[j]->Draw("P");
@@ -1989,25 +2037,18 @@ void plot_corrfuncs()
   cv2->Divide(1, 2);
 
   cv2->cd(1);
-  gvn_CNTFVTXSFVTXN_pT[0][1]->SetMinimum(0);
-  gvn_CNTFVTXSFVTXN_pT[0][1]->SetMaximum(0.24);
-  gvn_CNTFVTXSFVTXN_pT[0][1]->GetXaxis()->SetRangeUser(0, 3);
-  gvn_CNTFVTXSFVTXN_pT[0][1]->SetTitle(";p_{T} [GeV/c];v_{2}");
-  gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("AP");
+  haxis_vnpt->GetYaxis()->SetRangeUser(0, 0.29);
+  haxis_vnpt->GetXaxis()->SetRangeUser(0, 5);
+  haxis_vnpt->DrawCopy();
 
+  gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("P");
   gvn_CNTBBCSFVTXN_pT[0][1]->Draw("P");
   gvn_CNTBBCSFVTXS_pT[0][1]->Draw("P");
   gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
   gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
 
-  if ( energy > 20 )
-  {
-    gv2_Ron->Draw("P");
-    legv2->AddEntry(gv2_Ron, "FVTXS EP (Ron)", "P");
-  }
-
   ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
-  legv2->Draw("same");
+  leg3sub->Draw("same");
 
 
 
@@ -2016,8 +2057,6 @@ void plot_corrfuncs()
   haxis_cncent->SetMinimum(0.0);
   haxis_cncent->SetMaximum(0.26);
   haxis_cncent->SetTitle(";;v_{2}");
-  haxis_cncent->GetYaxis()->SetTitleSize(0.06);
-  haxis_cncent->GetXaxis()->SetLabelSize(0.06);
   haxis_cncent->DrawCopy();
 
   gvn_CNTFVTXSFVTXN_cent[1]->Draw("P");
@@ -2031,18 +2070,6 @@ void plot_corrfuncs()
 
 
 
-
-
-
-
-  TCanvas *cv2mult = new TCanvas("cv2mult", "v2 mult", 800, 600);
-
-  cv2mult->cd(1);
-  gvn_CNTFVTXSFVTXN_mult[1]->GetYaxis()->SetRangeUser(0, 0.30);
-  gvn_CNTFVTXSFVTXN_mult[1]->Draw("AP");
-  gvn_CNTBBCSFVTXN_mult[1]->Draw("P");
-  gvn_CNTBBCSFVTXS_mult[1]->Draw("P");
-  gvn_CNTFVTXSBBCN_mult[1]->Draw("P");
 
 
   TCanvas *cv2multnum = new TCanvas("cv2multnum", "v2 mult num", 800, 600);
@@ -2076,20 +2103,6 @@ void plot_corrfuncs()
     cv2ptfitrat->SetRightMargin(0);
     cv2ptfitrat->SetBottomMargin(0);
     cv2ptfitrat->SetLeftMargin(0);
-    // cv2ptfitrat->Divide(1, 2, 0, 0);
-
-    // cv2ptfitrat->GetPad(1)->SetTopMargin(0.12);
-    // cv2ptfitrat->GetPad(1)->SetRightMargin(0.02);
-    // cv2ptfitrat->GetPad(1)->SetBottomMargin(0.0);
-    // cv2ptfitrat->GetPad(1)->SetLeftMargin(0.12);
-    // cv2ptfitrat->GetPad(1)->SetTicks(1, 1);
-
-    // cv2ptfitrat->GetPad(2)->SetTopMargin(0.0);
-    // cv2ptfitrat->GetPad(2)->SetRightMargin(0.02);
-    // cv2ptfitrat->GetPad(2)->SetBottomMargin(0.12);
-    // cv2ptfitrat->GetPad(2)->SetLeftMargin(0.12);
-    // cv2ptfitrat->GetPad(2)->SetTicks(1, 1);
-
 
     //-- v2
     // cv2ptfitrat->cd(1);
@@ -2102,18 +2115,10 @@ void plot_corrfuncs()
     pv2->Draw();
     pv2->cd();
 
-    gvn_CNTFVTXSFVTXN_pT[0][1]->SetMinimum(0.01);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->SetMaximum(0.24);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetXaxis()->SetRangeUser(0, 3);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->SetTitle(";p_{T} [GeV/c];v_{2}");
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->CenterTitle();
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetTitleFont(63);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetTitleSize(20);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetTitleOffset(1.7);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetLabelFont(63);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->GetYaxis()->SetLabelSize(14);
-    gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("AP");
+    haxis_vnpt->GetXaxis()->SetRangeUser(0, 3);
+    haxis_vnpt->DrawCopy();
 
+    gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("P");
     gvn_CNTBBCSFVTXN_pT[0][1]->Draw("P");
     gvn_CNTBBCSFVTXS_pT[0][1]->Draw("P");
     if (energy == 200)
@@ -2140,23 +2145,11 @@ void plot_corrfuncs()
     prat->Draw();
     prat->cd();
 
-    gv2fitrat_CNTFVTXSFVTXN->SetMinimum(0.51);
-    gv2fitrat_CNTFVTXSFVTXN->SetMaximum(1.49);
-    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetRangeUser(0, 3);
-    gv2fitrat_CNTFVTXSFVTXN->SetTitle(";p_{T} [GeV/c];v_{2} / fit");
-    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetTitleFont(63);
-    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetTitleSize(20);
-    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetTitleOffset(1.7);
-    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetLabelFont(63);
-    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->SetLabelSize(14);
-    gv2fitrat_CNTFVTXSFVTXN->GetYaxis()->CenterTitle();
-    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetTitleFont(63);
-    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetTitleSize(20);
-    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetTitleOffset(2.0);
-    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetLabelFont(63);
-    gv2fitrat_CNTFVTXSFVTXN->GetXaxis()->SetLabelSize(14);
-    gv2fitrat_CNTFVTXSFVTXN->Draw("AP");
+    haxis_ratpt->GetYaxis()->SetRangeUser(0.51, 1.49);
+    haxis_ratpt->GetXaxis()->SetRangeUser(0, 3);
+    haxis_ratpt->Draw();
 
+    gv2fitrat_CNTFVTXSFVTXN->Draw("P");
     gv2fitrat_CNTBBCSFVTXN->Draw("P");
     gv2fitrat_CNTBBCSFVTXS->Draw("P");
     if (energy == 200)
@@ -2172,7 +2165,87 @@ void plot_corrfuncs()
   }
 
 
+  //-- v2 vs pT in centrality bins
+  TCanvas* cv2ptcent = new TCanvas("cv2ptcent", "v2 pt centrality", 1200, 500);
+  cv2ptcent->SetMargin(0, 0, 0, 0);
+  cv2ptcent->Divide(3, 1, 0, 0);
 
+  cv2ptcent->GetPad(1)->SetMargin(0.12, 0.00, 0.12, 0.08);
+  cv2ptcent->GetPad(2)->SetMargin(0.00, 0.00, 0.12, 0.08);
+  cv2ptcent->GetPad(3)->SetMargin(0.00, 0.02, 0.12, 0.08);
+
+  cv2ptcent->GetPad(1)->SetTicks(1, 1);
+  cv2ptcent->GetPad(2)->SetTicks(1, 1);
+  cv2ptcent->GetPad(3)->SetTicks(1, 1);
+
+  cv2ptcent->cd(1);
+  haxis_vnpt->GetYaxis()->SetRangeUser(0.0, 0.34);
+  haxis_vnpt->GetXaxis()->SetRangeUser(0.1, 2.9);
+  haxis_vnpt->GetXaxis()->SetTitleOffset(1.2);
+  haxis_vnpt->GetYaxis()->SetTitleOffset(1.5);
+  haxis_vnpt->DrawCopy();
+
+  TGraphErrors *gtmp_CNTFVTXSFVTXN =
+    (TGraphErrors*) gvn_CNTFVTXSFVTXN_pT[0][1]->Clone("gtmp_CNTFVTXSFVTXN");
+  gtmp_CNTFVTXSFVTXN->SetMarkerColor(centColor[0]);
+  gtmp_CNTFVTXSFVTXN->SetLineColor(centColor[0]);
+  gtmp_CNTFVTXSFVTXN->Draw("P");
+
+
+  for (int ic = 1; ic < NC; ic++)
+  {
+    gvn_CNTFVTXSFVTXN_pT[ic][1]->SetMarkerColor(centColor[ic]);
+    gvn_CNTFVTXSFVTXN_pT[ic][1]->SetLineColor(centColor[ic]);
+    gvn_CNTFVTXSFVTXN_pT[ic][1]->Draw("P");
+  }
+
+  le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXN-FVTXS");
+
+  TLegend *legc = new TLegend(0.7, 0.15, 0.98, 0.45);
+  legc->SetFillStyle(0);
+  legc->SetBorderSize(0);
+  legc->AddEntry(gtmp_CNTFVTXSFVTXN, Form("%i--%i%%", cl[0], ch[0]), "P");
+  for (int ic = 1; ic < NC; ic++)
+    legc->AddEntry(gvn_CNTFVTXSFVTXN_pT[ic][1], Form("%i--%i%%", cl[ic], ch[ic]), "P");
+  legc->Draw("same");
+
+  cv2ptcent->cd(2);
+  haxis_vnpt->DrawCopy();
+
+  TGraphErrors *gtmp_CNTBBCSFVTXN =
+    (TGraphErrors*) gvn_CNTBBCSFVTXN_pT[0][1]->Clone("gtmp_CNTBBCSFVTXN");
+  gtmp_CNTBBCSFVTXN->SetMarkerColor(centColor[0]);
+  gtmp_CNTBBCSFVTXN->SetLineColor(centColor[0]);
+  gtmp_CNTBBCSFVTXN->Draw("P");
+
+  for (int ic = 1; ic < NC; ic++)
+  {
+    gvn_CNTBBCSFVTXN_pT[ic][1]->SetMarkerColor(centColor[ic]);
+    gvn_CNTBBCSFVTXN_pT[ic][1]->SetLineColor(centColor[ic]);
+    gvn_CNTBBCSFVTXN_pT[ic][1]->Draw("P");
+  }
+
+  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+  le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXN-BBCS");
+
+
+  cv2ptcent->cd(3);
+  haxis_vnpt->DrawCopy();
+
+  TGraphErrors *gtmp_CNTBBCSFVTXS =
+    (TGraphErrors*) gvn_CNTBBCSFVTXS_pT[0][1]->Clone("gtmp_CNTBBCSFVTXS");
+  gtmp_CNTBBCSFVTXS->SetMarkerColor(centColor[0]);
+  gtmp_CNTBBCSFVTXS->SetLineColor(centColor[0]);
+  gtmp_CNTBBCSFVTXS->Draw("P");
+
+  for (int ic = 1; ic < NC; ic++)
+  {
+    gvn_CNTBBCSFVTXS_pT[ic][1]->SetMarkerColor(centColor[ic]);
+    gvn_CNTBBCSFVTXS_pT[ic][1]->SetLineColor(centColor[ic]);
+    gvn_CNTBBCSFVTXS_pT[ic][1]->Draw("P");
+  }
+
+  le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXS-BBCS");
 
 
   //==========================================================================//
@@ -2232,8 +2305,11 @@ void plot_corrfuncs()
     sprintf(cname, "pdfs/dAu%i_v2.pdf", energy);
     cv2->Print(cname);
 
-    sprintf(cname, "pdfs/dAu%u_v2pT_fitrat.pdf", energy);
+    sprintf(cname, "pdfs/dAu%i_v2pT_fitrat.pdf", energy);
     cv2ptfitrat->Print(cname);
+
+    sprintf(cname, "pdfs/dAu%i_v2pT_cent.pdf", energy);
+    cv2ptcent->Print(cname);
 
   } // printPlots
 
