@@ -41,7 +41,7 @@ void plot_energydep()
 
   const char* inFile = "correlations.root";
 
-  bool printPlots = true;
+  bool printPlots = false;
 
   const int NE = 3;
   int energy[] = {200, 62, 39, 20};
@@ -54,6 +54,8 @@ void plot_energydep()
   TGraphErrors *gv2_CNTFVTXSFVTXN_mult[NE];
   TGraphErrors *gv2_CNTBBCSFVTXS_mult[NE];
   TGraphErrors *gv2_CNTBBCSFVTXN_mult[NE];
+
+  TGraphErrors *gc2c1_deta[NE];
 
 
   char hname[500];
@@ -80,6 +82,8 @@ void plot_energydep()
       cout << "ERROR!! Unable to find " << hname << " in " << inFile << endl;
       return;
     }
+    gv2_CNTFVTXSFVTXN_mult[ie]->SetMarkerColor(energyColor[ie]);
+    gv2_CNTFVTXSFVTXN_mult[ie]->SetLineColor(energyColor[ie]);
 
     sprintf(hname, "gv2_dAu%i_CNTBBCSFVTXS_mult", energy[ie]);
     gv2_CNTBBCSFVTXS_mult[ie] = (TGraphErrors*) fin->Get(hname);
@@ -88,6 +92,8 @@ void plot_energydep()
       cout << "ERROR!! Unable to find " << hname << " in " << inFile << endl;
       return;
     }
+    gv2_CNTBBCSFVTXS_mult[ie]->SetMarkerColor(energyColor[ie]);
+    gv2_CNTBBCSFVTXS_mult[ie]->SetLineColor(energyColor[ie]);
 
     sprintf(hname, "gv2_dAu%i_CNTBBCSFVTXN_mult", energy[ie]);
     gv2_CNTBBCSFVTXN_mult[ie] = (TGraphErrors*) fin->Get(hname);
@@ -96,7 +102,18 @@ void plot_energydep()
       cout << "ERROR!! Unable to find " << hname << " in " << inFile << endl;
       return;
     }
+    gv2_CNTBBCSFVTXN_mult[ie]->SetMarkerColor(energyColor[ie]);
+    gv2_CNTBBCSFVTXN_mult[ie]->SetLineColor(energyColor[ie]);
 
+    sprintf(hname, "gc2c1_deta_dAu%i_c0", energy[ie]);
+    gc2c1_deta[ie] = (TGraphErrors*) fin->Get(hname);
+    if (!gc2c1_deta[ie])
+    {
+      cout << "ERROR!! Unable to find " << hname << " in " << inFile << endl;
+      return;
+    }
+    gc2c1_deta[ie]->SetMarkerColor(energyColor[ie]);
+    gc2c1_deta[ie]->SetLineColor(energyColor[ie]);
   }
 
   //==========================================================================//
@@ -122,6 +139,13 @@ void plot_energydep()
   legenergy->SetBorderSize(0);
   for (int ie = 0; ie < NE; ie++)
     legenergy->AddEntry(gv2_CNTBBCSFVTXS_mult[ie], Form("dAu %i GeV", energy[ie]), "P");
+
+
+  TLegend *legdeta = new TLegend(0.55, 0.75, 0.88, 0.88);
+  legdeta->SetFillStyle(0);
+  legdeta->SetBorderSize(0);
+  for (int ie = 0; ie < NE; ie++)
+    legdeta->AddEntry(gc2c1_deta[ie], Form("dAu %i GeV", energy[ie]), "P");
 
 
 
@@ -156,8 +180,6 @@ void plot_energydep()
   haxis_mult->Draw();
   for (int ie = 0; ie < NE; ie++)
   {
-    gv2_CNTFVTXSFVTXN_mult[ie]->SetMarkerColor(energyColor[ie]);
-    gv2_CNTFVTXSFVTXN_mult[ie]->SetLineColor(energyColor[ie]);
     gv2_CNTFVTXSFVTXN_mult[ie]->Draw("P");
   }
   ltitle.DrawLatex(0.5, 0.95, "CNT--FVTXS--FVTXN");
@@ -167,8 +189,6 @@ void plot_energydep()
   haxis_mult->Draw();
   for (int ie = 0; ie < NE; ie++)
   {
-    gv2_CNTBBCSFVTXN_mult[ie]->SetMarkerColor(energyColor[ie]);
-    gv2_CNTBBCSFVTXN_mult[ie]->SetLineColor(energyColor[ie]);
     gv2_CNTBBCSFVTXN_mult[ie]->Draw("P");
   }
   ltitle.DrawLatex(0.5, 0.95, "CNT--BBCS--FVTXN");
@@ -177,11 +197,21 @@ void plot_energydep()
   haxis_mult->Draw();
   for (int ie = 0; ie < NE; ie++)
   {
-    gv2_CNTBBCSFVTXS_mult[ie]->SetMarkerColor(energyColor[ie]);
-    gv2_CNTBBCSFVTXS_mult[ie]->SetLineColor(energyColor[ie]);
     gv2_CNTBBCSFVTXS_mult[ie]->Draw("P");
   }
   ltitle.DrawLatex(0.5, 0.95, "CNT--BBCS--FVTXS");
+
+
+
+  TCanvas* cdeta = new TCanvas("cdeta", "deta", 800, 800);
+
+  cdeta->cd(1);
+  gc2c1_deta[0]->GetYaxis()->SetRangeUser(0, 0.7);
+  gc2c1_deta[0]->Draw("AP");
+  for (int ie = 0; ie < NE; ie++)
+    gc2c1_deta[ie]->Draw("P");
+
+  legdeta->Draw("same");
 
   //==========================================================================//
   // Print Plots
