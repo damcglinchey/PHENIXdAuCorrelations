@@ -41,7 +41,7 @@ void plot_energydep()
 
   const char* inFile = "correlations.root";
 
-  bool printPlots = false;
+  bool printPlots = true;
 
   const int NE = 3;
   int energy[] = {200, 62, 39, 20};
@@ -54,6 +54,9 @@ void plot_energydep()
   TGraphErrors *gv2_CNTFVTXSFVTXN_mult[NE];
   TGraphErrors *gv2_CNTBBCSFVTXS_mult[NE];
   TGraphErrors *gv2_CNTBBCSFVTXN_mult[NE];
+
+  TGraphErrors *gv2_CNTFVTXSFVTXN_pT[NE];
+  TGraphErrors *gv2_CNTBBCSFVTXS_pT[NE];
 
   TGraphErrors *gc2c1_deta[NE];
 
@@ -75,6 +78,7 @@ void plot_energydep()
 
   for (int ie = 0; ie < NE; ie++)
   {
+    //-- v2 vs multiplicity
     sprintf(hname, "gv2_dAu%i_CNTFVTXSFVTXN_mult", energy[ie]);
     gv2_CNTFVTXSFVTXN_mult[ie] = (TGraphErrors*) fin->Get(hname);
     if (!gv2_CNTFVTXSFVTXN_mult[ie])
@@ -105,6 +109,30 @@ void plot_energydep()
     gv2_CNTBBCSFVTXN_mult[ie]->SetMarkerColor(energyColor[ie]);
     gv2_CNTBBCSFVTXN_mult[ie]->SetLineColor(energyColor[ie]);
 
+
+    //-- v2 vs pt 0-5%
+    sprintf(hname, "gv2_dAu%i_CNTFVTXSFVTXN_pT_c0", energy[ie]);
+    gv2_CNTFVTXSFVTXN_pT[ie] = (TGraphErrors*) fin->Get(hname);
+    if (!gv2_CNTFVTXSFVTXN_pT[ie])
+    {
+      cout << "ERROR!! Unable to find " << hname << " in " << inFile << endl;
+      return;
+    }
+    gv2_CNTFVTXSFVTXN_pT[ie]->SetMarkerColor(energyColor[ie]);
+    gv2_CNTFVTXSFVTXN_pT[ie]->SetLineColor(energyColor[ie]);
+
+    sprintf(hname, "gv2_dAu%i_CNTBBCSFVTXS_pT_c0", energy[ie]);
+    gv2_CNTBBCSFVTXS_pT[ie] = (TGraphErrors*) fin->Get(hname);
+    if (!gv2_CNTBBCSFVTXS_pT[ie])
+    {
+      cout << "ERROR!! Unable to find " << hname << " in " << inFile << endl;
+      return;
+    }
+    gv2_CNTBBCSFVTXS_pT[ie]->SetMarkerColor(energyColor[ie]);
+    gv2_CNTBBCSFVTXS_pT[ie]->SetLineColor(energyColor[ie]);
+
+
+    //-- v2 vs delta eta
     sprintf(hname, "gc2c1_deta_dAu%i_c0", energy[ie]);
     gc2c1_deta[ie] = (TGraphErrors*) fin->Get(hname);
     if (!gc2c1_deta[ie])
@@ -124,7 +152,7 @@ void plot_energydep()
 
   TH1F* haxis_mult = new TH1F("haxis_mult", ";<N_{PC1}>;v_{2}", 22, 0, 22);
   haxis_mult->SetMinimum(0);
-  haxis_mult->SetMaximum(0.30);
+  haxis_mult->SetMaximum(0.20);
 
   TLegend *leg3sub = new TLegend(0.55, 0.75, 0.88, 0.88);
   leg3sub->SetFillStyle(0);
@@ -134,11 +162,20 @@ void plot_energydep()
   leg3sub->AddEntry(gv2_CNTBBCSFVTXS_mult[0], "3 sub-event CNT-BBCS-FVTXS", "P");
 
 
-  TLegend *legenergy = new TLegend(0.55, 0.75, 0.88, 0.88);
+  TLegend *legenergy = new TLegend(0.15, 0.75, 0.4, 0.88);
   legenergy->SetFillStyle(0);
   legenergy->SetBorderSize(0);
   for (int ie = 0; ie < NE; ie++)
     legenergy->AddEntry(gv2_CNTBBCSFVTXS_mult[ie], Form("dAu %i GeV", energy[ie]), "P");
+
+
+  TLegend *legept = new TLegend(0.15, 0.75, 0.35, 0.88);
+  legept->SetFillStyle(0);
+  legept->SetBorderSize(0);
+  legept->SetTextAlign(22);
+  legept->SetHeader("0--5%");
+  for (int ie = 0; ie < NE; ie++)
+    legept->AddEntry(gv2_CNTBBCSFVTXS_mult[ie], Form("dAu %i GeV", energy[ie]), "P");
 
 
   TLegend *legdeta = new TLegend(0.55, 0.75, 0.88, 0.88);
@@ -147,11 +184,30 @@ void plot_energydep()
   for (int ie = 0; ie < NE; ie++)
     legdeta->AddEntry(gc2c1_deta[ie], Form("dAu %i GeV", energy[ie]), "P");
 
+  TH1F* haxis_vnpt = new TH1F("haxis_vnpt", ";p_{T} [GeV/c];v_{2}", 100, 0, 5);
+  haxis_vnpt->SetMinimum(0.01);
+  haxis_vnpt->SetMaximum(0.29);
+  haxis_vnpt->GetYaxis()->CenterTitle();
+  haxis_vnpt->GetYaxis()->SetTitleFont(63);
+  haxis_vnpt->GetYaxis()->SetTitleSize(20);
+  haxis_vnpt->GetYaxis()->SetTitleOffset(1.7);
+  haxis_vnpt->GetYaxis()->SetLabelFont(63);
+  haxis_vnpt->GetYaxis()->SetLabelSize(14);
+  haxis_vnpt->GetXaxis()->SetTitleFont(63);
+  haxis_vnpt->GetXaxis()->SetTitleSize(20);
+  haxis_vnpt->GetXaxis()->SetTitleOffset(1.7);
+  haxis_vnpt->GetXaxis()->SetLabelFont(63);
+  haxis_vnpt->GetXaxis()->SetLabelSize(14);
+
+
 
 
   TLatex ltitle;
   ltitle.SetNDC();
   ltitle.SetTextAlign(22);
+
+  TLatex lcent;
+  lcent.SetNDC();
 
   //==========================================================================//
   // PLOT
@@ -165,12 +221,13 @@ void plot_energydep()
   for (int ie = 0; ie < NE; ie++)
   {
     gv2_CNTFVTXSFVTXN_mult[ie]->DrawClone("P");
-    gv2_CNTBBCSFVTXS_mult[ie]->DrawClone("P");
-    gv2_CNTBBCSFVTXN_mult[ie]->DrawClone("P");
+    // gv2_CNTBBCSFVTXS_mult[ie]->DrawClone("P");
+    // gv2_CNTBBCSFVTXN_mult[ie]->DrawClone("P");
   }
 
-  leg3sub->Draw("same");
-
+  // leg3sub->Draw("same");
+  ltitle.DrawLatex(0.5, 0.95, "CNT--FVTXS--FVTXN");
+  legenergy->Draw("same");
 
 
   TCanvas* cv2energy = new TCanvas("cv2energy", "v2 energy", 600, 900);
@@ -203,6 +260,22 @@ void plot_energydep()
 
 
 
+  TCanvas* cv2pt = new TCanvas("cv2pt", "v2 pT", 800, 800);
+  cv2pt->cd(1);
+  haxis_vnpt->GetXaxis()->SetRangeUser(0, 3);
+  haxis_vnpt->Draw();
+
+  for (int ie = 0; ie < NE; ie++)
+  {
+    gv2_CNTFVTXSFVTXN_pT[ie]->Draw("P");
+  }
+
+  legept->Draw("same");
+  ltitle.DrawLatex(0.5, 0.95, "CNT--FVTXS--FVTXN");
+
+
+
+
   TCanvas* cdeta = new TCanvas("cdeta", "deta", 800, 800);
 
   cdeta->cd(1);
@@ -223,6 +296,8 @@ void plot_energydep()
 
     cv2mult->Print("pdfs/v2_multiplicity.pdf");
     cv2energy->Print("pdfs/v2_multiplicity_method.pdf");
+    cv2pt->Print("pdfs/v2_pT_energy.pdf");
+    cdeta->Print("pdfs/c2c1_deta_energy.pdf");
   }
 
 }
