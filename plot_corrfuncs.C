@@ -55,7 +55,7 @@ void plot_corrfuncs()
   // SET RUNNING CONDITIONS
   //==========================================================================//
 
-  int energy = 39;
+  int energy = 20;
 
   bool printPlots = false;
   bool saveHistos = false;
@@ -65,7 +65,7 @@ void plot_corrfuncs()
   // plotting options
   bool plot_CORRPT = false;
   bool plot_FGBG = false;
-  bool plot_CORR = false;
+  bool plot_CORR = true;
 
 
   const int NC  =  6; // number of centrality bins
@@ -78,10 +78,10 @@ void plot_corrfuncs()
   int ch[] = {5, 10, 20, 40, 60, 100};
   int centColor[] = {kBlack, kBlue, kRed, kGreen + 2, kMagenta + 2, kOrange + 2};
 
-  // int ptsuml = 3;
-  // int ptsumh = 5;
-  int ptsuml = 0;
-  int ptsumh = NPT - 1;
+  int ptsuml = 3;
+  int ptsumh = 5;
+  // int ptsuml = 0;
+  // int ptsumh = NPT - 1;
 
 
 
@@ -126,6 +126,13 @@ void plot_corrfuncs()
   vector<int> corrRebin(NCORR, 4);
   corrRebin[BBCNBBCS] = 8;
   corrRebin[CNTBBCN] = 8;
+  if (energy == 20)
+  {
+    corrRebin[CNTBBCS] = 8;
+    corrRebin[CNTFVTXS] = 8;
+    corrRebin[CNTFVTXN] = 8;
+    corrRebin[BBCSFVTXS] = 8;
+  }
 
   const int NPAR = 4; // number of orders in the fourier fit
   int fitColor[] = {kBlue, kRed, kGreen + 2, kMagenta + 2, kYellow + 2};
@@ -624,6 +631,7 @@ void plot_corrfuncs()
             (TH1D*) dphi_FGsum_pt[icorr][ic][ipt]->Clone(
               Form("dphi_corr_pt_%i_%i_%i", icorr, ic, ipt));
           dphi_corr_pt[icorr][ic][ipt]->SetDirectory(0);
+          dphi_corr_pt[icorr][ic][ipt]->SetTitle(";#Delta#phi;C(#Delta#Phi)");
           dphi_corr_pt[icorr][ic][ipt]->Divide(dphi_BGsum_pt[icorr][ic][ipt]);
           dphi_corr_pt[icorr][ic][ipt]->Scale(
             dphi_BGsum_pt[icorr][ic][ipt]->Integral() / dphi_FGsum_pt[icorr][ic][ipt]->Integral());
@@ -639,6 +647,8 @@ void plot_corrfuncs()
         (TH1D*) dphi_FGsum[icorr][ic]->Clone(
           Form("dphi_corr_%i_%i", icorr, ic));
       dphi_corr[icorr][ic]->SetDirectory(0);
+      // dphi_corr[icorr][ic]->SetTitle(";#Delta#phi;C(#Delta#Phi)");
+      dphi_corr[icorr][ic]->SetTitle(";#Delta#phi;");
       dphi_corr[icorr][ic]->Divide(dphi_BGsum[icorr][ic]);
       dphi_corr[icorr][ic]->Scale(
         dphi_BGsum[icorr][ic]->Integral() / dphi_FGsum[icorr][ic]->Integral());
@@ -1713,6 +1723,18 @@ void plot_corrfuncs()
             }
             fcorr->DrawCopy("same");
           }
+
+
+        lc.SetTextColor(fitColor[0]);
+        lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
+                                     cn_pt[icorr][ic][ipt][0].first));
+        lc.SetTextColor(fitColor[1]);
+        lc.DrawLatex(0.45, 0.64, Form("C_{2} = % .4f",
+                                      cn_pt[icorr][ic][ipt][1].first));
+        lc.SetTextColor(kBlack);
+        lc.DrawLatex(0.45, 0.58, Form("C_{2}/C_{1} = % .4f",
+                                      cn_pt[icorr][ic][ipt][1].first / cn_pt[icorr][ic][ipt][0].first));
+
 
         } // ic
 
