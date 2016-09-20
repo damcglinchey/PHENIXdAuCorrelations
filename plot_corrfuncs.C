@@ -55,7 +55,7 @@ void plot_corrfuncs()
   // SET RUNNING CONDITIONS
   //==========================================================================//
 
-  int energy = 20;
+  int energy = 200;
 
   bool printPlots = false;
   bool saveHistos = false;
@@ -63,26 +63,53 @@ void plot_corrfuncs()
   bool printTables = false;
 
   // plotting options
-  bool plot_CORRPT = false;
+  bool plot_CORRPT = true;
   bool plot_FGBG = false;
   bool plot_CORR = true;
 
 
-  const int NC  =  6; // number of centrality bins
+  // For getting plots from file
   const int NZ  = 10; // number of z bins
-  const int NPT =  7; // number of pT bins
 
-  float ptl[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 3.00};
-  float pth[] = {0.50, 0.75, 1.00, 1.50, 2.00, 3.00, 5.00};
+  // const int NPT =  7; // number of pT bins
+  // float ptl[] = {0.25, 0.50, 0.75, 1.00, 1.50, 2.00, 3.00};
+  // float pth[] = {0.50, 0.75, 1.00, 1.50, 2.00, 3.00, 5.00};
+  const int NPT = 16;
+  float ptl[] =
+  {
+    0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0,
+    2.2, 2.4, 2.6, 2.8, 3.0, 4.0
+  };
+  float pth[] =
+  {
+    0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2,
+    2.4, 2.6, 2.8, 3.0, 4.0, 5.0
+  };
+
+
+  const int NC  =  6; // number of centrality bins
   int cl[] = {0,  5, 10, 20, 40,  60};
   int ch[] = {5, 10, 20, 40, 60, 100};
   int centColor[] = {kBlack, kBlue, kRed, kGreen + 2, kMagenta + 2, kOrange + 2};
 
-  int ptsuml = 3;
-  int ptsumh = 5;
-  // int ptsuml = 0;
-  // int ptsumh = NPT - 1;
+  // pT integrated limits (bin limits)
+  // int ptsuml = 3;
+  // int ptsumh = 5;
+  int ptsuml = 0;
+  int ptsumh = NPT - 1;
 
+
+  // Resumming over Centrality
+  // const int NCRESUM = 6;
+  // int resum_icl[] = {0, 1, 2, 3, 4, 5};
+  // int resum_ich[] = {0, 1, 2, 3, 4, 5};
+
+  // const int NCRESUM = 5;
+  // int resum_icl[] = {0, 2, 3, 4, 5}; // >=
+  // int resum_ich[] = {1, 2, 3, 4, 5}; // <=
+  const int NCRESUM = 4;
+  int resum_icl[] = {0, 3, 4, 5}; // >=
+  int resum_ich[] = {2, 3, 4, 5}; // <=
 
 
   // correlations between detectors
@@ -90,14 +117,14 @@ void plot_corrfuncs()
   const int NCORR = 9;   // number of correlations
   enum CORR {
     CNTBBCS = 0,
-    CNTBBCN,
-    CNTFVTXS,
-    CNTFVTXN,
-    BBCNBBCS,
-    BBCNFVTXS,
-    FVTXNBBCS,
-    FVTXNFVTXS,
-    BBCSFVTXS,
+    CNTBBCN = 1,
+    CNTFVTXS = 2,
+    CNTFVTXN = 3,
+    BBCNBBCS = 4,
+    BBCNFVTXS = 5,
+    FVTXNBBCS = 6,
+    FVTXNFVTXS = 7,
+    BBCSFVTXS = 8,
   }; // Note: These better be in the same order as cCorr[]!!!
   const char *cCorr[] =
   {
@@ -133,6 +160,10 @@ void plot_corrfuncs()
     corrRebin[CNTFVTXN] = 8;
     corrRebin[BBCSFVTXS] = 8;
   }
+  for (int i = 0; i < NCORR; i++)
+  {
+    cout << " Will Rebin " << cCorr[i] << " by " << corrRebin[i] << endl;
+  }
 
   const int NPAR = 4; // number of orders in the fourier fit
   int fitColor[] = {kBlue, kRed, kGreen + 2, kMagenta + 2, kYellow + 2};
@@ -146,28 +177,28 @@ void plot_corrfuncs()
   TH1D* dphi_FG12_pt[NCORRPT][NZ][NC][NPT];
   TH1D* dphi_BG12_pt[NCORRPT][NZ][NC][NPT];
 
-  TH1D* dphi_FGsum_pt[NCORRPT][NC][NPT];
-  TH1D* dphi_BGsum_pt[NCORRPT][NC][NPT];
-  TH1D* dphi_corr_pt[NCORRPT][NC][NPT];
+  TH1D* dphi_FGsum_pt[NCORRPT][NCRESUM][NPT];
+  TH1D* dphi_BGsum_pt[NCORRPT][NCRESUM][NPT];
+  TH1D* dphi_corr_pt[NCORRPT][NCRESUM][NPT];
 
   // pT integrated
   TH1D* dphi_FG12[NCORR][NZ][NC];
   TH1D* dphi_BG12[NCORR][NZ][NC];
 
-  TH1D* dphi_FGsum[NCORR][NC];
-  TH1D* dphi_BGsum[NCORR][NC];
-  TH1D* dphi_corr[NCORR][NC];
+  TH1D* dphi_FGsum[NCORR][NCRESUM];
+  TH1D* dphi_BGsum[NCORR][NCRESUM];
+  TH1D* dphi_corr[NCORR][NCRESUM];
 
   TH1D* dphi_BGsum_tot[NCORR];
-  TH1D* dphi_corr_tot[NCORR][NC];
+  TH1D* dphi_corr_tot[NCORR][NCRESUM];
 
   // multiplicity
   TH2D* hnpc1centrality;
-  TH1D* hnpc1_cent[NC];
+  TH1D* hnpc1_cent[NCRESUM];
 
   // deta
-  TH1D* deta[NCORR][NC];
-  double mdeta[NCORR][NC] = {0};
+  TH1D* deta[NCORR][NCRESUM];
+  double mdeta[NCORR][NCRESUM] = {0};
 
 
   //-- fitting
@@ -188,56 +219,56 @@ void plot_corrfuncs()
 
 
   //-- cn's
-  ValErr cn_pt[NCORRPT][NC][NPT][NPAR];
-  ValErr cn[NCORR][NC][NPAR];
+  ValErr cn_pt[NCORRPT][NCRESUM][NPT][NPAR];
+  ValErr cn[NCORR][NCRESUM][NPAR];
 
   // calculated numerically (i.e. not from fit)
-  ValErr cn_num_pt[NCORRPT][NC][NPT][NPAR];
-  ValErr cn_num[NCORR][NC][NPAR];
+  ValErr cn_num_pt[NCORRPT][NCRESUM][NPT][NPAR];
+  ValErr cn_num[NCORR][NCRESUM][NPAR];
 
   //-- Multplicity
-  ValErr mean_npc1[NC];
+  ValErr mean_npc1[NCRESUM];
 
   //-- cn graphs
-  TGraphErrors *gcn_pt[NCORRPT][NC][NPAR];
+  TGraphErrors *gcn_pt[NCORRPT][NCRESUM][NPAR];
   TGraphErrors *gcn[NCORR][NPAR];
   TGraphErrors *gc2c1[NCORR];
 
-  TGraphErrors *gc2c1_deta[NC];
+  TGraphErrors *gc2c1_deta[NCRESUM];
 
 
   //-- vn (3 sub-event method)
-  ValErr vn_CNTFVTXSFVTXN_cent[NC][NPAR];
-  ValErr vn_CNTFVTXSFVTXN_pT[NC][NPAR][NPT];
+  ValErr vn_CNTFVTXSFVTXN_cent[NCRESUM][NPAR];
+  ValErr vn_CNTFVTXSFVTXN_pT[NCRESUM][NPAR][NPT];
   TGraphErrors *gvn_CNTFVTXSFVTXN_cent[NPAR];
   TGraphErrors *gvn_CNTFVTXSFVTXN_mult[NPAR];
-  TGraphErrors *gvn_CNTFVTXSFVTXN_pT[NC][NPAR];
+  TGraphErrors *gvn_CNTFVTXSFVTXN_pT[NCRESUM][NPAR];
 
-  ValErr vn_CNTBBCSFVTXS_cent[NC][NPAR];
-  ValErr vn_CNTBBCSFVTXS_pT[NC][NPAR][NPT];
+  ValErr vn_CNTBBCSFVTXS_cent[NCRESUM][NPAR];
+  ValErr vn_CNTBBCSFVTXS_pT[NCRESUM][NPAR][NPT];
   TGraphErrors *gvn_CNTBBCSFVTXS_cent[NPAR];
   TGraphErrors *gvn_CNTBBCSFVTXS_mult[NPAR];
-  TGraphErrors *gvn_CNTBBCSFVTXS_pT[NC][NPAR];
+  TGraphErrors *gvn_CNTBBCSFVTXS_pT[NCRESUM][NPAR];
 
-  ValErr vn_CNTBBCSFVTXN_cent[NC][NPAR];
-  ValErr vn_CNTBBCSFVTXN_pT[NC][NPAR][NPT];
+  ValErr vn_CNTBBCSFVTXN_cent[NCRESUM][NPAR];
+  ValErr vn_CNTBBCSFVTXN_pT[NCRESUM][NPAR][NPT];
   TGraphErrors *gvn_CNTBBCSFVTXN_cent[NPAR];
   TGraphErrors *gvn_CNTBBCSFVTXN_mult[NPAR];
-  TGraphErrors *gvn_CNTBBCSFVTXN_pT[NC][NPAR];
+  TGraphErrors *gvn_CNTBBCSFVTXN_pT[NCRESUM][NPAR];
 
-  ValErr vn_CNTFVTXSBBCN_cent[NC][NPAR];
-  ValErr vn_CNTFVTXSBBCN_pT[NC][NPAR][NPT];
+  ValErr vn_CNTFVTXSBBCN_cent[NCRESUM][NPAR];
+  ValErr vn_CNTFVTXSBBCN_pT[NCRESUM][NPAR][NPT];
   TGraphErrors *gvn_CNTFVTXSBBCN_cent[NPAR];
   TGraphErrors *gvn_CNTFVTXSBBCN_mult[NPAR];
-  TGraphErrors *gvn_CNTFVTXSBBCN_pT[NC][NPAR];
+  TGraphErrors *gvn_CNTFVTXSBBCN_pT[NCRESUM][NPAR];
 
-  ValErr vn_CNTBBCSBBCN_cent[NC][NPAR];
-  ValErr vn_CNTBBCSBBCN_pT[NC][NPAR][NPT];
+  ValErr vn_CNTBBCSBBCN_cent[NCRESUM][NPAR];
+  ValErr vn_CNTBBCSBBCN_pT[NCRESUM][NPAR][NPT];
   TGraphErrors *gvn_CNTBBCSBBCN_cent[NPAR];
   TGraphErrors *gvn_CNTBBCSBBCN_mult[NPAR];
-  TGraphErrors *gvn_CNTBBCSBBCN_pT[NC][NPAR];
+  TGraphErrors *gvn_CNTBBCSBBCN_pT[NCRESUM][NPAR];
 
-  ValErr vn_num_CNTBBCSFVTXN_cent[NC][NPAR];
+  ValErr vn_num_CNTBBCSFVTXN_cent[NCRESUM][NPAR];
   TGraphErrors *gvn_num_CNTBBCSFVTXN_mult[NPAR];
 
 
@@ -276,7 +307,9 @@ void plot_corrfuncs()
   for (int iz = 0; iz < NZ; iz++)
   {
     //-- change to the correct directory
-    bool chdir = fin->cd(Form("c00_z%02i_r00", iz));
+    sprintf(hname, "c00_z%02i_r00", iz);
+    cout << "----> Changing to directory " << hname << " for iz:" << iz << endl;
+    bool chdir = fin->cd(hname);
     if (!chdir)
     {
       cout << "ERROR!! Unable to change into directory for "
@@ -362,63 +395,17 @@ void plot_corrfuncs()
           h1tmp = (TH1D*) h2tmp->ProjectionX("h1tmp");
 
 
-
-          //-- sum the FG & BG (pT dependent)
-          if (iz == 0)
-          {
-            // pT dependent sums
-            dphi_FGsum_pt[icorr][ic][ipt] =
-              (TH1D*) dphi_FG12_pt[icorr][iz][ic][ipt]->Clone(
-                Form("dphi_FGsum_pt_%s_%i_%i", cCorr[icorr], ic, ipt));
-            dphi_FGsum_pt[icorr][ic][ipt]->SetDirectory(0);
-
-            dphi_BGsum_pt[icorr][ic][ipt] =
-              (TH1D*) dphi_BG12_pt[icorr][iz][ic][ipt]->Clone(
-                Form("dphi_BGsum_pt_%s_%i_%i", cCorr[icorr], ic, ipt));
-            dphi_BGsum_pt[icorr][ic][ipt]->SetDirectory(0);
-
-          }
-          else
-          {
-            dphi_FGsum_pt[icorr][ic][ipt]->Add(dphi_FG12_pt[icorr][iz][ic][ipt]);
-            dphi_BGsum_pt[icorr][ic][ipt]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
-          }
-
-
           //-- sum the FG & BG (pT integrated)
           if (iz == 0 && ipt == ptsuml)
           {
-            // pT dependent sums
-            dphi_FGsum[icorr][ic] =
-              (TH1D*) dphi_FG12_pt[icorr][iz][ic][ipt]->Clone(
-                Form("dphi_FGsum_%s_%i", cCorr[icorr], ic));
-            dphi_FGsum[icorr][ic]->SetDirectory(0);
-
-            dphi_BGsum[icorr][ic] =
-              (TH1D*) dphi_BG12_pt[icorr][iz][ic][ipt]->Clone(
-                Form("dphi_BGsum_%s_%i", cCorr[icorr], ic));
-            dphi_BGsum[icorr][ic]->SetDirectory(0);
-
-            dphi_BGsum_tot[icorr] =
-              (TH1D*) dphi_BG12_pt[icorr][iz][ic][ipt]->Clone(
-                Form("dphi_BGsum_tot_%s", cCorr[icorr]));
-            dphi_BGsum_tot[icorr]->SetDirectory(0);
-
-            deta[icorr][ic] =
-              (TH1D*) h1tmp->Clone(
-                Form("deta_%s_%i", cCorr[icorr], ic));
+            sprintf(hname, "deta_%s_%i", cCorr[icorr], ic);
+            deta[icorr][ic] = (TH1D*) h1tmp->Clone(hname);
             deta[icorr][ic]->SetDirectory(0);
 
           }
           if (ipt > ptsuml && ipt <= ptsumh && iz > 0)
           {
-            dphi_FGsum[icorr][ic]->Add(dphi_FG12_pt[icorr][iz][ic][ipt]);
-            dphi_BGsum[icorr][ic]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
-
-            dphi_BGsum_tot[icorr]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
-
             deta[icorr][ic]->Add(h1tmp);
-
           }
 
           delete h1tmp;
@@ -432,9 +419,8 @@ void plot_corrfuncs()
       //-- Get the pT integrated correlations
       for (int icorr = NCORRPT; icorr < NCORR; icorr++)
       {
-
-        // FG12
         sprintf(hname, "dphi_%s_%03i_%03i_FG12", cCorr[icorr], cl[ic], ch[ic]);
+
         dphi_FG12[icorr][iz][ic] = (TH1D*) gROOT->FindObject(hname);
         if (!dphi_FG12[icorr][iz][ic])
         {
@@ -451,7 +437,6 @@ void plot_corrfuncs()
         dphi_FG12[icorr][iz][ic]->Sumw2();
         dphi_FG12[icorr][iz][ic]->Rebin(corrRebin[icorr]);
 
-
         // BG12
         sprintf(hname, "dphi_%s_%03i_%03i_BG12", cCorr[icorr], cl[ic], ch[ic]);
         dphi_BG12[icorr][iz][ic] = (TH1D*) gROOT->FindObject(hname);
@@ -464,10 +449,10 @@ void plot_corrfuncs()
         }
         dphi_BG12[icorr][iz][ic]->SetDirectory(0);
         sprintf(hname, "dphi_BG12_%s_%i_%i", cCorr[icorr], ic, iz);
-        dphi_BG12[icorr][iz][ic]->SetName(hname);
         dphi_BG12[icorr][iz][ic]->SetLineColor(kRed);
         dphi_BG12[icorr][iz][ic]->Sumw2();
         dphi_BG12[icorr][iz][ic]->Rebin(corrRebin[icorr]);
+
 
         // deta
         sprintf(hname,
@@ -488,34 +473,12 @@ void plot_corrfuncs()
         // Sum the FG & BG
         if (iz == 0)
         {
-          dphi_FGsum[icorr][ic] =
-            (TH1D*) dphi_FG12[icorr][iz][ic]->Clone(
-              Form("dphi_FGsum_%s_%i", cCorr[icorr], ic));
-          dphi_FGsum[icorr][ic]->SetDirectory(0);
-
-          dphi_BGsum[icorr][ic] =
-            (TH1D*) dphi_BG12[icorr][iz][ic]->Clone(
-              Form("dphi_BGsum_%s_%i", cCorr[icorr], ic));
-          dphi_BGsum[icorr][ic]->SetDirectory(0);
-
-          dphi_BGsum_tot[icorr] =
-            (TH1D*) dphi_BG12[icorr][iz][ic]->Clone(
-              Form("dphi_BGsum_tot_%s", cCorr[icorr]));
-          dphi_BGsum_tot[icorr]->SetDirectory(0);
-
-          deta[icorr][ic] =
-            (TH1D*) h1tmp->Clone(
-              Form("deta_%s_%i", cCorr[icorr], ic));
+          sprintf(hname, "deta_%s_%i", cCorr[icorr], ic);
+          deta[icorr][ic] = (TH1D*) h1tmp->Clone(hname);
           deta[icorr][ic]->SetDirectory(0);
-
         }
         else
         {
-          dphi_FGsum[icorr][ic]->Add(dphi_FG12[icorr][iz][ic]);
-          dphi_BGsum[icorr][ic]->Add(dphi_BG12[icorr][iz][ic]);
-
-          dphi_BGsum_tot[icorr]->Add(dphi_BG12[icorr][iz][ic]);
-
           deta[icorr][ic]->Add(h1tmp);
         }
 
@@ -531,8 +494,155 @@ void plot_corrfuncs()
 
   } // iz
 
+
+
   fin->Close();
   delete fin;
+
+
+  //==========================================================================//
+  // SUM THE FG AND BG
+  //==========================================================================//
+  cout << endl;
+  cout << "--> Summing FG and BG histograms" << endl;
+
+
+  // //-- testing
+  // cout << endl;
+  // cout << "--------------------------------" << endl;
+  // cout << "------ TESTING POST CLOSE ------" << endl;
+  // cout << "--------------------------------" << endl;
+  // for (int icorr = NCORRPT; icorr < NCORR; icorr++)
+  // {
+  //   for (int ic = 0; ic < NC; ic++)
+  //   {
+  //     for (int iz = 0; iz < NZ; iz++)
+  //     {
+  //       cout << " icorr:" << icorr << " iz:" << iz << " ic:" << ic
+  //            << " cCorr:" << cCorr[icorr]
+  //            << " cl-ch:" << cl[ic] << "-" << ch[ic]
+  //            << " FGname:" << dphi_FG12[icorr][iz][ic]->GetName()
+  //            << " FGnx:" << dphi_FG12[icorr][iz][ic]->GetNbinsX()
+  //            << " FGint:" << dphi_FG12[icorr][iz][ic]->Integral()
+  //            // << " BGname:" << dphi_BG12[icorr][iz][ic]->GetName()
+  //            // << " BGnx:" << dphi_BG12[icorr][iz][ic]->GetNbinsX()
+  //            << endl;
+  //     }
+  //   }
+  // }
+  // cout << "--------------------------------" << endl;
+  // cout << "--------------------------------" << endl;
+  // cout << "--------------------------------" << endl;
+  // cout << endl;
+
+
+
+  //-- Get the pT dependent CNT-FVTX and CNT-BBC correlations
+  for (int icorr = 0; icorr < NCORRPT; icorr++)
+  {
+
+    for (int icr = 0; icr < NCRESUM; icr++)
+    {
+
+      // pT dependent sums
+      sprintf(hname, "dphi_FGsum_%s_%i", cCorr[icorr], icr);
+      dphi_FGsum[icorr][icr] =
+        (TH1D*) dphi_FG12_pt[icorr][0][0][0]->Clone(hname);
+      dphi_FGsum[icorr][icr]->Reset();
+
+      sprintf(hname, "dphi_BGsum_%s_%i", cCorr[icorr], icr);
+      dphi_BGsum[icorr][icr] =
+        (TH1D*) dphi_BG12_pt[icorr][0][0][0]->Clone(hname);
+      dphi_BGsum[icorr][icr]->Reset();
+
+      sprintf(hname, "dphi_BGsum_tot_%s_%i", cCorr[icorr], icr);
+      dphi_BGsum_tot[icorr] =
+        (TH1D*) dphi_BG12_pt[icorr][0][0][0]->Clone(hname);
+      dphi_BGsum_tot[icorr]->Reset();
+
+      for (int ipt = 0; ipt < NPT; ipt++)
+      {
+
+        // cout << "- icorr:" << icorr
+        //      << " icr:" << icr
+        //      << " ipt:" << ipt
+        //      << endl;
+
+
+        // pT dependent sums
+        sprintf(hname, "dphi_FGsum_pt_%s_%i_%i", cCorr[icorr], icr, ipt);
+        dphi_FGsum_pt[icorr][icr][ipt] =
+          (TH1D*) dphi_FG12_pt[icorr][0][0][ipt]->Clone(hname);
+        dphi_FGsum_pt[icorr][icr][ipt]->Reset();
+
+        sprintf(hname, "dphi_BGsum_pt_%s_%i_%i", cCorr[icorr], icr, ipt);
+        dphi_BGsum_pt[icorr][icr][ipt] =
+          (TH1D*) dphi_BG12_pt[icorr][0][0][ipt]->Clone(hname);
+        dphi_BGsum_pt[icorr][icr][ipt]->Reset();
+
+        for (int ic = resum_icl[icr]; ic <= resum_ich[icr]; ic++)
+        {
+          for (int iz = 0; iz < NZ; iz++)
+          {
+            // cout << "     summing - ic:" << ic << " iz:" << iz << endl;
+
+            dphi_FGsum_pt[icorr][icr][ipt]->Add(dphi_FG12_pt[icorr][iz][ic][ipt]);
+            dphi_BGsum_pt[icorr][icr][ipt]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
+
+            if (ipt > ptsuml && ipt <= ptsumh)
+            {
+              dphi_FGsum[icorr][icr]->Add(dphi_FG12_pt[icorr][iz][ic][ipt]);
+              dphi_BGsum[icorr][icr]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
+
+              dphi_BGsum_tot[icorr]->Add(dphi_BG12_pt[icorr][iz][ic][ipt]);
+            } // if (ipt)
+          } // iz
+        } // ic
+      } // ipt
+    } // icr
+  } // icorr
+
+
+
+  //-- Loop over the pT independent correlations
+  for (int icorr = NCORRPT; icorr < NCORR; icorr++)
+  {
+    for (int icr = 0; icr < NCRESUM; icr++)
+    {
+
+      // cout << "- icorr:" << icorr
+      //      << " icr:" << icr
+      //      << endl;
+
+      // pT dependent sums
+      sprintf(hname, "dphi_FGsum_%s_%i", cCorr[icorr], icr);
+      dphi_FGsum[icorr][icr] =
+        (TH1D*) dphi_FG12[icorr][0][0]->Clone(hname);
+      dphi_FGsum[icorr][icr]->Reset();
+
+      sprintf(hname, "dphi_BGsum_%s_%i", cCorr[icorr], icr);
+      dphi_BGsum[icorr][icr] =
+        (TH1D*) dphi_BG12[icorr][0][0]->Clone(hname);
+      dphi_BGsum[icorr][icr]->Reset();
+
+      sprintf(hname, "dphi_BGsum_tot_%s_%i", cCorr[icorr], icr);
+      dphi_BGsum_tot[icorr] =
+        (TH1D*) dphi_BG12[icorr][0][0]->Clone(hname);
+      dphi_BGsum_tot[icorr]->Reset();
+
+      for (int ic = resum_icl[icr]; ic <= resum_ich[icr]; ic++)
+      {
+        for (int iz = 0; iz < NZ; iz++)
+        {
+          // cout << "     summing - ic:" << ic << " iz:" << iz << endl;
+          dphi_FGsum[icorr][icr]->Add(dphi_FG12[icorr][iz][ic]);
+          dphi_BGsum[icorr][icr]->Add(dphi_BG12[icorr][iz][ic]);
+        } // iz
+      } // ic
+    } // icr
+  }// icorr
+
+
 
   //==========================================================================//
   // READ THE MULTIPLICITY HISTOGRAMS FROM FILE
@@ -560,10 +670,10 @@ void plot_corrfuncs()
   hnpc1centrality->SetName(Form("hnpc1centrality_dAu%i", energy));
   hnpc1centrality->SetDirectory(0);
 
-  for (int ic = 0; ic < NC; ic++)
+  for (int ic = 0; ic < NCRESUM; ic++)
   {
-    int bl = hnpc1centrality->GetXaxis()->FindBin(cl[ic]);
-    int bh = hnpc1centrality->GetXaxis()->FindBin(ch[ic] - 1);
+    int bl = hnpc1centrality->GetXaxis()->FindBin(cl[resum_icl[ic]]);
+    int bh = hnpc1centrality->GetXaxis()->FindBin(ch[resum_ich[ic]] - 1);
 
     hnpc1_cent[ic] = (TH1D*) hnpc1centrality->ProjectionY(
                        Form("hnpc1_cent_dAu%i_c%i", energy, ic),
@@ -577,7 +687,8 @@ void plot_corrfuncs()
 
   }
 
-
+  fin->Close();
+  delete fin;
 
   //==========================================================================//
   // CALCULTATE MEAN DELTA ETA
@@ -588,7 +699,7 @@ void plot_corrfuncs()
   for (int icorr = 0; icorr < NCORR; icorr++)
   {
     cout << "  " << cCorr[icorr] << endl;
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       mdeta[icorr][ic] = deta[icorr][ic]->GetMean();
 
@@ -618,7 +729,7 @@ void plot_corrfuncs()
 
   for (int icorr = 0; icorr < NCORR; icorr++)
   {
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       // pT dependent (icorr < NCORRPT)
       if ( icorr < NCORRPT )
@@ -667,7 +778,7 @@ void plot_corrfuncs()
 
   for (int icorr = 0; icorr < NCORR; icorr++)
   {
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       dphi_corr_tot[icorr][ic] =
@@ -692,7 +803,7 @@ void plot_corrfuncs()
 
   for (int icorr = 0; icorr < NCORR; icorr++)
   {
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       //-- pT dependent
       if (icorr < NCORRPT)
@@ -721,7 +832,7 @@ void plot_corrfuncs()
 
   for (int icorr = 0; icorr < NCORR; icorr++)
   {
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       //-- pT dependent
       if (icorr < NCORRPT)
@@ -772,7 +883,7 @@ void plot_corrfuncs()
   //-- pT dependent correlations (vs pT)
   for (int icorr = 0; icorr < NCORRPT; icorr++)
   {
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       for (int ipar = 0; ipar < NPAR; ipar++)
       {
@@ -809,7 +920,7 @@ void plot_corrfuncs()
     gc2c1[icorr]->GetYaxis()->CenterTitle();
     gc2c1[icorr]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       double c2c1 = -1 * cn[icorr][ic][1].first / cn[icorr][ic][0].first;
       double unc = 0;
@@ -837,7 +948,7 @@ void plot_corrfuncs()
       gcn[icorr][ipar]->SetTitle(Form(";centrality index; C_{%i}", ipar));
       gcn[icorr][ipar]->SetMinimum(100);
 
-      for (int ic = 0; ic < NC; ic++)
+      for (int ic = 0; ic < NCRESUM; ic++)
       {
         gcn[icorr][ipar]->SetPoint(ic, ic + 0.5, cn[icorr][ic][ipar].first);
         gcn[icorr][ipar]->SetPointError(ic, 0, cn[icorr][ic][ipar].second);
@@ -852,7 +963,7 @@ void plot_corrfuncs()
 
 
   //-- C2/C1 vs deta
-  for (int ic = 0; ic < NC; ic++)
+  for (int ic = 0; ic < NCRESUM; ic++)
   {
     gc2c1_deta[ic] = new TGraphErrors();
     gc2c1_deta[ic]->SetName(Form("gc2c1_deta_%i", ic));
@@ -916,7 +1027,7 @@ void plot_corrfuncs()
     gvn_CNTFVTXSFVTXN_mult[j]->SetLineColor(kBlue);
     gvn_CNTFVTXSFVTXN_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       vn_CNTFVTXSFVTXN_cent[ic][j] = vn_3sub(cn[CNTFVTXS][ic][j],
@@ -945,7 +1056,7 @@ void plot_corrfuncs()
     }
 
     //pT dependence
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       gvn_CNTFVTXSFVTXN_pT[ic][j] = new TGraphErrors();
       sprintf(hname, "gv%i_dAu%i_CNTFVTXSFVTXN_pT_c%i", j + 1, energy, ic);
@@ -1000,7 +1111,7 @@ void plot_corrfuncs()
     gvn_CNTBBCSFVTXS_mult[j]->SetLineColor(kRed);
     gvn_CNTBBCSFVTXS_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       vn_CNTBBCSFVTXS_cent[ic][j] = vn_3sub(
@@ -1030,7 +1141,7 @@ void plot_corrfuncs()
     }
 
     //pT dependence
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       gvn_CNTBBCSFVTXS_pT[ic][j] = new TGraphErrors();
       sprintf(hname, "gv%i_dAu%i_CNTBBCSFVTXS_pT_c%i", j + 1, energy, ic);
@@ -1086,7 +1197,7 @@ void plot_corrfuncs()
     gvn_CNTBBCSFVTXN_mult[j]->SetLineColor(kGreen + 2);
     gvn_CNTBBCSFVTXN_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       vn_CNTBBCSFVTXN_cent[ic][j] = vn_3sub(
@@ -1117,7 +1228,7 @@ void plot_corrfuncs()
     }
 
     //pT dependence
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       gvn_CNTBBCSFVTXN_pT[ic][j] = new TGraphErrors();
       sprintf(hname, "gv%i_dAu%i_CNTBBCSFVTXN_pT_c%i", j + 1, energy, ic);
@@ -1174,7 +1285,7 @@ void plot_corrfuncs()
     gvn_CNTFVTXSBBCN_mult[j]->SetLineColor(kMagenta + 2);
     gvn_CNTFVTXSBBCN_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       vn_CNTFVTXSBBCN_cent[ic][j] = vn_3sub(
@@ -1183,7 +1294,7 @@ void plot_corrfuncs()
                                       cn[BBCNFVTXS][ic][j] );
 
       //fill centrality tgraph
-      gvn_CNTFVTXSBBCN_cent[j]->SetPoint(ic, ic + 0.5 - 2*cshift, vn_CNTFVTXSBBCN_cent[ic][j].first);
+      gvn_CNTFVTXSBBCN_cent[j]->SetPoint(ic, ic + 0.5 - 2 * cshift, vn_CNTFVTXSBBCN_cent[ic][j].first);
       gvn_CNTFVTXSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTFVTXSBBCN_cent[ic][j].second);
 
       if (vn_CNTFVTXSBBCN_cent[ic][j].first > gvn_CNTFVTXSBBCN_cent[j]->GetMaximum())
@@ -1205,7 +1316,7 @@ void plot_corrfuncs()
     }
 
     //pT dependence
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       gvn_CNTFVTXSBBCN_pT[ic][j] = new TGraphErrors();
       sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_pT_c%i", j + 1, energy, ic);
@@ -1262,7 +1373,7 @@ void plot_corrfuncs()
     gvn_CNTBBCSBBCN_mult[j]->SetLineColor(kOrange + 2);
     gvn_CNTBBCSBBCN_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       vn_CNTBBCSBBCN_cent[ic][j] = vn_3sub(
@@ -1271,7 +1382,7 @@ void plot_corrfuncs()
                                      cn[BBCNBBCS][ic][j] );
 
       //fill centrality tgraph
-      gvn_CNTBBCSBBCN_cent[j]->SetPoint(ic, ic + 0.5 + 2*cshift, vn_CNTBBCSBBCN_cent[ic][j].first);
+      gvn_CNTBBCSBBCN_cent[j]->SetPoint(ic, ic + 0.5 + 2 * cshift, vn_CNTBBCSBBCN_cent[ic][j].first);
       gvn_CNTBBCSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTBBCSBBCN_cent[ic][j].second);
 
       if (vn_CNTBBCSBBCN_cent[ic][j].first > gvn_CNTBBCSBBCN_cent[j]->GetMaximum())
@@ -1293,7 +1404,7 @@ void plot_corrfuncs()
     }
 
     //pT dependence
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       gvn_CNTBBCSBBCN_pT[ic][j] = new TGraphErrors();
       sprintf(hname, "gv%i_dAu%i_CNTBBCSBBCN_pT_c%i", j + 1, energy, ic);
@@ -1312,7 +1423,7 @@ void plot_corrfuncs()
 
         //fill tgraph
         gvn_CNTBBCSBBCN_pT[ic][j]->SetPoint(ipt,
-                                            0.5 * (ptl[ipt] + pth[ipt]) + 2* ptshift,
+                                            0.5 * (ptl[ipt] + pth[ipt]) + 2 * ptshift,
                                             vn_CNTBBCSBBCN_pT[ic][j][ipt].first);
         gvn_CNTBBCSBBCN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSBBCN_pT[ic][j][ipt].second);
 
@@ -1341,7 +1452,7 @@ void plot_corrfuncs()
     gvn_num_CNTBBCSFVTXN_mult[j]->SetLineColor(kGreen + 2);
     gvn_num_CNTBBCSFVTXN_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
 
       vn_num_CNTBBCSFVTXN_cent[ic][j] = vn_3sub(
@@ -1548,7 +1659,7 @@ void plot_corrfuncs()
     legv2->AddEntry(gv2_Ron, "FVTXS EP (Ron)", "P");
 
 
-  TH1F* haxis_cncent = new TH1F("haxis_cncent", "", NC, 0, NC);
+  TH1F* haxis_cncent = new TH1F("haxis_cncent", "", NCRESUM, 0, NCRESUM);
   haxis_cncent->GetYaxis()->CenterTitle();
   haxis_cncent->GetYaxis()->SetTitleFont(63);
   haxis_cncent->GetYaxis()->SetTitleSize(20);
@@ -1563,7 +1674,7 @@ void plot_corrfuncs()
 
   for (int ibin = 1; ibin <= haxis_cncent->GetNbinsX(); ibin++)
   {
-    sprintf(ctitle, "%i - %i%%", cl[ibin - 1], ch[ibin - 1]);
+    sprintf(ctitle, "%i - %i%%", cl[resum_icl[ibin - 1]], ch[resum_ich[ibin - 1]]);
     haxis_cncent->GetXaxis()->SetBinLabel(ibin, ctitle);
   }
 
@@ -1633,7 +1744,7 @@ void plot_corrfuncs()
           sprintf(hname, "cFGBGpt_%i_%i", icorr, ipt);
           cFGBGpt[icorr][ipt] = new TCanvas(hname, hname, 1200, 1000);
           cFGBGpt[icorr][ipt]->Divide(3, 2, 0, 0);
-          for (int ic = 0; ic < NC; ic++)
+          for (int ic = 0; ic < NCRESUM; ic++)
           {
             cFGBGpt[icorr][ipt]->GetPad(ic + 1)->SetTopMargin(0.1);
             cFGBGpt[icorr][ipt]->GetPad(ic + 1)->SetRightMargin(0.02);
@@ -1652,7 +1763,7 @@ void plot_corrfuncs()
 
             sprintf(ctitle, "%s FGBG %.2f<pT<%.2f %i-%i%%",
                     cCorr[icorr],
-                    ptl[ipt], pth[ipt], cl[ic], ch[ic]);
+                    ptl[ipt], pth[ipt], cl[resum_icl[ic]], ch[resum_ich[ic]]);
             ltitle.DrawLatex(0.5, 0.95, ctitle);
 
             if (ic == 0)
@@ -1665,7 +1776,7 @@ void plot_corrfuncs()
         sprintf(hname, "ccorrpt_%i_%i", icorr, ipt);
         ccorrpt[icorr][ipt] = new TCanvas(hname, hname, 1200, 1000);
         ccorrpt[icorr][ipt]->Divide(3, 2, 0, 0);
-        for (int ic = 0; ic < NC; ic++)
+        for (int ic = 0; ic < NCRESUM; ic++)
         {
           ccorrpt[icorr][ipt]->GetPad(ic + 1)->SetTopMargin(0.1);
           ccorrpt[icorr][ipt]->GetPad(ic + 1)->SetRightMargin(0.02);
@@ -1697,7 +1808,7 @@ void plot_corrfuncs()
           sprintf(ctitle, "%s %.2f<pT<%.2f %i-%i%%",
                   cCorr[icorr],
                   ptl[ipt], pth[ipt],
-                  cl[ic], ch[ic]);
+                  cl[resum_icl[ic]], ch[resum_ich[ic]]);
           ltitle.DrawLatex(0.5, 0.95, ctitle);
 
           l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
@@ -1725,15 +1836,15 @@ void plot_corrfuncs()
           }
 
 
-        lc.SetTextColor(fitColor[0]);
-        lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
-                                     cn_pt[icorr][ic][ipt][0].first));
-        lc.SetTextColor(fitColor[1]);
-        lc.DrawLatex(0.45, 0.64, Form("C_{2} = % .4f",
-                                      cn_pt[icorr][ic][ipt][1].first));
-        lc.SetTextColor(kBlack);
-        lc.DrawLatex(0.45, 0.58, Form("C_{2}/C_{1} = % .4f",
-                                      cn_pt[icorr][ic][ipt][1].first / cn_pt[icorr][ic][ipt][0].first));
+          lc.SetTextColor(fitColor[0]);
+          lc.DrawLatex(0.45, 0.7, Form("C_{1} = % .4f",
+                                       cn_pt[icorr][ic][ipt][0].first));
+          lc.SetTextColor(fitColor[1]);
+          lc.DrawLatex(0.45, 0.64, Form("C_{2} = % .4f",
+                                        cn_pt[icorr][ic][ipt][1].first));
+          lc.SetTextColor(kBlack);
+          lc.DrawLatex(0.45, 0.58, Form("C_{2}/C_{1} = % .4f",
+                                        cn_pt[icorr][ic][ipt][1].first / cn_pt[icorr][ic][ipt][0].first));
 
 
         } // ic
@@ -1750,7 +1861,7 @@ void plot_corrfuncs()
         sprintf(hname, "cFGBG_%i", icorr);
         cFGBG[icorr] = new TCanvas(hname, hname, 1200, 1000);
         cFGBG[icorr]->Divide(3, 2, 0, 0);
-        for (int ic = 0; ic < NC; ic++)
+        for (int ic = 0; ic < NCRESUM; ic++)
         {
           cFGBG[icorr]->GetPad(ic + 1)->SetTopMargin(0.1);
           cFGBG[icorr]->GetPad(ic + 1)->SetRightMargin(0.02);
@@ -1769,7 +1880,7 @@ void plot_corrfuncs()
 
           sprintf(ctitle, "%s FGBG %i-%i%%",
                   cCorr[icorr],
-                  cl[ic], ch[ic]);
+                  cl[resum_icl[ic]], ch[resum_ich[ic]]);
           ltitle.DrawLatex(0.5, 0.95, ctitle);
 
           if (ic == 0)
@@ -1780,7 +1891,7 @@ void plot_corrfuncs()
         sprintf(hname, "cBGrat_%i", icorr);
         cBGrat[icorr] = new TCanvas(hname, hname, 1200, 1000);
         cBGrat[icorr]->Divide(3, 2, 0, 0);
-        for (int ic = 0; ic < NC; ic++)
+        for (int ic = 0; ic < NCRESUM; ic++)
         {
           cBGrat[icorr]->GetPad(ic + 1)->SetTopMargin(0.1);
           cBGrat[icorr]->GetPad(ic + 1)->SetRightMargin(0.02);
@@ -1796,7 +1907,7 @@ void plot_corrfuncs()
 
           sprintf(ctitle, "%s BG ratio %i-%i%% / %i-%i%%",
                   cCorr[icorr],
-                  cl[ic], ch[ic], cl[0], ch[0]);
+                  cl[ic], ch[ic], cl[resum_icl[0]], ch[resum_ich[0]]);
           ltitle.DrawLatex(0.5, 0.95, ctitle);
 
           l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
@@ -1820,7 +1931,7 @@ void plot_corrfuncs()
       sprintf(hname, "ccorr_%i", icorr);
       ccorr[icorr] = new TCanvas(hname, hname, 1200, 1000);
       ccorr[icorr]->Divide(3, 2, 0, 0);
-      for (int ic = 0; ic < NC; ic++)
+      for (int ic = 0; ic < NCRESUM; ic++)
       {
         ccorr[icorr]->GetPad(ic + 1)->SetTopMargin(0.1);
         ccorr[icorr]->GetPad(ic + 1)->SetRightMargin(0.02);
@@ -1870,7 +1981,7 @@ void plot_corrfuncs()
 
         sprintf(ctitle, "%s %i-%i%%",
                 cCorr[icorr],
-                cl[ic], ch[ic]);
+                cl[resum_icl[ic]], ch[resum_ich[ic]]);
         ltitle.DrawLatex(0.5, 0.95, ctitle);
 
         l1.DrawLine(-1 * TMath::Pi() / 2., 1, 3 * TMath::Pi() / 2., 1.);
@@ -2046,7 +2157,9 @@ void plot_corrfuncs()
 
     if (j == 1)
     {
-      ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+      ltitle.DrawLatex(0.5, 0.95,
+                       Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%",
+                            energy, cl[resum_icl[0]], ch[resum_ich[0]]));
       le.DrawLatex(0.2, 0.86, "3 sub-event #color[4]{CNT}-FVTXN-FVTXS");
       le.DrawLatex(0.2, 0.80, "3 sub-event #color[2]{CNT}-BBCS-FVTXS");
       le.DrawLatex(0.2, 0.74, "3 sub-event #color[418]{CNT}-BBCS-FVTXN");
@@ -2069,7 +2182,9 @@ void plot_corrfuncs()
   gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
   gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
 
-  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+  ltitle.DrawLatex(0.5, 0.95,
+                   Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%",
+                        energy, cl[resum_icl[0]], ch[resum_ich[0]]));
   leg3sub->Draw("same");
 
 
@@ -2111,7 +2226,7 @@ void plot_corrfuncs()
 
   gc2c1_deta[0]->Draw("AP");
 
-  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[resum_icl[0]], ch[resum_ich[0]]));
 
 
 
@@ -2152,7 +2267,7 @@ void plot_corrfuncs()
     gv2_Ron->Draw("P");
     fpol->Draw("same");
 
-    ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
+    ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[resum_icl[0]], ch[resum_ich[0]]));
     legv2->Draw("same");
 
     //-- Ratio to fit
@@ -2188,87 +2303,93 @@ void plot_corrfuncs()
 
 
   //-- v2 vs pT in centrality bins
-  TCanvas* cv2ptcent = new TCanvas("cv2ptcent", "v2 pt centrality", 1200, 500);
-  cv2ptcent->SetMargin(0, 0, 0, 0);
-  cv2ptcent->Divide(3, 1, 0, 0);
-
-  cv2ptcent->GetPad(1)->SetMargin(0.12, 0.00, 0.12, 0.08);
-  cv2ptcent->GetPad(2)->SetMargin(0.00, 0.00, 0.12, 0.08);
-  cv2ptcent->GetPad(3)->SetMargin(0.00, 0.02, 0.12, 0.08);
-
-  cv2ptcent->GetPad(1)->SetTicks(1, 1);
-  cv2ptcent->GetPad(2)->SetTicks(1, 1);
-  cv2ptcent->GetPad(3)->SetTicks(1, 1);
-
-  cv2ptcent->cd(1);
-  haxis_vnpt->GetYaxis()->SetRangeUser(0.0, 0.34);
-  haxis_vnpt->GetXaxis()->SetRangeUser(0.1, 2.9);
-  haxis_vnpt->GetXaxis()->SetTitleOffset(1.2);
-  haxis_vnpt->GetYaxis()->SetTitleOffset(1.5);
-  haxis_vnpt->DrawCopy();
-
-  TGraphErrors *gtmp_CNTFVTXSFVTXN =
-    (TGraphErrors*) gvn_CNTFVTXSFVTXN_pT[0][1]->Clone("gtmp_CNTFVTXSFVTXN");
-  gtmp_CNTFVTXSFVTXN->SetMarkerColor(centColor[0]);
-  gtmp_CNTFVTXSFVTXN->SetLineColor(centColor[0]);
-  gtmp_CNTFVTXSFVTXN->Draw("P");
-
-
-  for (int ic = 1; ic < NC; ic++)
+  TCanvas* cv2ptcent;
+  if (energy > 20)
   {
-    gvn_CNTFVTXSFVTXN_pT[ic][1]->SetMarkerColor(centColor[ic]);
-    gvn_CNTFVTXSFVTXN_pT[ic][1]->SetLineColor(centColor[ic]);
-    gvn_CNTFVTXSFVTXN_pT[ic][1]->Draw("P");
+
+    cv2ptcent = new TCanvas("cv2ptcent", "v2 pt centrality", 1200, 500);
+    cv2ptcent->SetMargin(0, 0, 0, 0);
+    cv2ptcent->Divide(3, 1, 0, 0);
+
+    cv2ptcent->GetPad(1)->SetMargin(0.12, 0.00, 0.12, 0.08);
+    cv2ptcent->GetPad(2)->SetMargin(0.00, 0.00, 0.12, 0.08);
+    cv2ptcent->GetPad(3)->SetMargin(0.00, 0.02, 0.12, 0.08);
+
+    cv2ptcent->GetPad(1)->SetTicks(1, 1);
+    cv2ptcent->GetPad(2)->SetTicks(1, 1);
+    cv2ptcent->GetPad(3)->SetTicks(1, 1);
+
+    cv2ptcent->cd(1);
+    haxis_vnpt->GetYaxis()->SetRangeUser(0.0, 0.34);
+    haxis_vnpt->GetXaxis()->SetRangeUser(0.1, 2.9);
+    haxis_vnpt->GetXaxis()->SetTitleOffset(1.2);
+    haxis_vnpt->GetYaxis()->SetTitleOffset(1.5);
+    haxis_vnpt->DrawCopy();
+
+    TGraphErrors *gtmp_CNTFVTXSFVTXN =
+      (TGraphErrors*) gvn_CNTFVTXSFVTXN_pT[0][1]->Clone("gtmp_CNTFVTXSFVTXN");
+    gtmp_CNTFVTXSFVTXN->SetMarkerColor(centColor[0]);
+    gtmp_CNTFVTXSFVTXN->SetLineColor(centColor[0]);
+    gtmp_CNTFVTXSFVTXN->Draw("P");
+
+
+    for (int ic = 1; ic < NCRESUM; ic++)
+    {
+      gvn_CNTFVTXSFVTXN_pT[ic][1]->SetMarkerColor(centColor[ic]);
+      gvn_CNTFVTXSFVTXN_pT[ic][1]->SetLineColor(centColor[ic]);
+      gvn_CNTFVTXSFVTXN_pT[ic][1]->Draw("P");
+    }
+
+    le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXN-FVTXS");
+
+    TLegend *legc = new TLegend(0.7, 0.15, 0.98, 0.45);
+    legc->SetFillStyle(0);
+    legc->SetBorderSize(0);
+    legc->AddEntry(gtmp_CNTFVTXSFVTXN, Form("%i--%i%%", cl[resum_icl[0]], ch[resum_ich[0]]), "P");
+    for (int ic = 1; ic < NCRESUM; ic++)
+      legc->AddEntry(gvn_CNTFVTXSFVTXN_pT[ic][1], Form("%i--%i%%", cl[resum_icl[ic]], ch[resum_ich[ic]]), "P");
+    legc->Draw("same");
+
+    cv2ptcent->cd(2);
+    haxis_vnpt->DrawCopy();
+
+    TGraphErrors *gtmp_CNTBBCSFVTXN =
+      (TGraphErrors*) gvn_CNTBBCSFVTXN_pT[0][1]->Clone("gtmp_CNTBBCSFVTXN");
+    gtmp_CNTBBCSFVTXN->SetMarkerColor(centColor[0]);
+    gtmp_CNTBBCSFVTXN->SetLineColor(centColor[0]);
+    gtmp_CNTBBCSFVTXN->Draw("P");
+
+    for (int ic = 1; ic < NCRESUM; ic++)
+    {
+      gvn_CNTBBCSFVTXN_pT[ic][1]->SetMarkerColor(centColor[ic]);
+      gvn_CNTBBCSFVTXN_pT[ic][1]->SetLineColor(centColor[ic]);
+      gvn_CNTBBCSFVTXN_pT[ic][1]->Draw("P");
+    }
+
+    ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[resum_icl[0]], ch[resum_ich[0]]));
+    le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXN-BBCS");
+
+
+    cv2ptcent->cd(3);
+    haxis_vnpt->DrawCopy();
+
+    TGraphErrors *gtmp_CNTBBCSFVTXS =
+      (TGraphErrors*) gvn_CNTBBCSFVTXS_pT[0][1]->Clone("gtmp_CNTBBCSFVTXS");
+    gtmp_CNTBBCSFVTXS->SetMarkerColor(centColor[0]);
+    gtmp_CNTBBCSFVTXS->SetLineColor(centColor[0]);
+    gtmp_CNTBBCSFVTXS->Draw("P");
+
+    for (int ic = 1; ic < NCRESUM; ic++)
+    {
+      gvn_CNTBBCSFVTXS_pT[ic][1]->SetMarkerColor(centColor[ic]);
+      gvn_CNTBBCSFVTXS_pT[ic][1]->SetLineColor(centColor[ic]);
+      gvn_CNTBBCSFVTXS_pT[ic][1]->Draw("P");
+    }
+
+    le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXS-BBCS");
+
+
   }
-
-  le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXN-FVTXS");
-
-  TLegend *legc = new TLegend(0.7, 0.15, 0.98, 0.45);
-  legc->SetFillStyle(0);
-  legc->SetBorderSize(0);
-  legc->AddEntry(gtmp_CNTFVTXSFVTXN, Form("%i--%i%%", cl[0], ch[0]), "P");
-  for (int ic = 1; ic < NC; ic++)
-    legc->AddEntry(gvn_CNTFVTXSFVTXN_pT[ic][1], Form("%i--%i%%", cl[ic], ch[ic]), "P");
-  legc->Draw("same");
-
-  cv2ptcent->cd(2);
-  haxis_vnpt->DrawCopy();
-
-  TGraphErrors *gtmp_CNTBBCSFVTXN =
-    (TGraphErrors*) gvn_CNTBBCSFVTXN_pT[0][1]->Clone("gtmp_CNTBBCSFVTXN");
-  gtmp_CNTBBCSFVTXN->SetMarkerColor(centColor[0]);
-  gtmp_CNTBBCSFVTXN->SetLineColor(centColor[0]);
-  gtmp_CNTBBCSFVTXN->Draw("P");
-
-  for (int ic = 1; ic < NC; ic++)
-  {
-    gvn_CNTBBCSFVTXN_pT[ic][1]->SetMarkerColor(centColor[ic]);
-    gvn_CNTBBCSFVTXN_pT[ic][1]->SetLineColor(centColor[ic]);
-    gvn_CNTBBCSFVTXN_pT[ic][1]->Draw("P");
-  }
-
-  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[0], ch[0]));
-  le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXN-BBCS");
-
-
-  cv2ptcent->cd(3);
-  haxis_vnpt->DrawCopy();
-
-  TGraphErrors *gtmp_CNTBBCSFVTXS =
-    (TGraphErrors*) gvn_CNTBBCSFVTXS_pT[0][1]->Clone("gtmp_CNTBBCSFVTXS");
-  gtmp_CNTBBCSFVTXS->SetMarkerColor(centColor[0]);
-  gtmp_CNTBBCSFVTXS->SetLineColor(centColor[0]);
-  gtmp_CNTBBCSFVTXS->Draw("P");
-
-  for (int ic = 1; ic < NC; ic++)
-  {
-    gvn_CNTBBCSFVTXS_pT[ic][1]->SetMarkerColor(centColor[ic]);
-    gvn_CNTBBCSFVTXS_pT[ic][1]->SetLineColor(centColor[ic]);
-    gvn_CNTBBCSFVTXS_pT[ic][1]->Draw("P");
-  }
-
-  le.DrawLatex(0.2, 0.84, "3 sub-event CNT-FVTXS-BBCS");
-
 
   //==========================================================================//
   // PRINT PLOTS
@@ -2327,11 +2448,14 @@ void plot_corrfuncs()
     sprintf(cname, "pdfs/dAu%i_v2.pdf", energy);
     cv2->Print(cname);
 
-    sprintf(cname, "pdfs/dAu%i_v2pT_fitrat.pdf", energy);
-    cv2ptfitrat->Print(cname);
+    if (energy > 20)
+    {
+      sprintf(cname, "pdfs/dAu%i_v2pT_fitrat.pdf", energy);
+      cv2ptfitrat->Print(cname);
 
-    sprintf(cname, "pdfs/dAu%i_v2pT_cent.pdf", energy);
-    cv2ptcent->Print(cname);
+      sprintf(cname, "pdfs/dAu%i_v2pT_cent.pdf", energy);
+      cv2ptcent->Print(cname);
+    }
 
   } // printPlots
 
@@ -2349,7 +2473,7 @@ void plot_corrfuncs()
 
     for (int icorr = 0; icorr < NCORR; icorr++)
     {
-      for (int ic = 0; ic < NC; ic++)
+      for (int ic = 0; ic < NCRESUM; ic++)
       {
         //-- pT dependent
         if (icorr < NCORRPT)
@@ -2384,7 +2508,7 @@ void plot_corrfuncs()
     //-- v_n for 3 sub-event method
     for (int ipar = 0; ipar < NPAR; ipar++)
     {
-      for (int ic = 0; ic < NC; ic++)
+      for (int ic = 0; ic < NCRESUM; ic++)
       {
         gvn_CNTFVTXSFVTXN_pT[ic][ipar]->Write();
         gvn_CNTBBCSFVTXS_pT[ic][ipar]->Write();
@@ -2462,7 +2586,7 @@ void plot_corrfuncs()
 
     for (int icorr = 0; icorr < NCORR; icorr++)
     {
-      for (int ic = 0; ic < NC; ic++)
+      for (int ic = 0; ic < NCRESUM; ic++)
       {
         cout << setw(5) << energy << " & "
              << setw(10) << cCorr[icorr] << " & "
@@ -2491,7 +2615,7 @@ void plot_corrfuncs()
          << setw(10) << "$v_{2}$(CNT--BBCS--FVTXS)" << " \\\\"
          << endl;
     cout << "\\hline" << endl;
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       for (int ipt = 0; ipt < NPT; ipt++)
       {
@@ -2520,7 +2644,7 @@ void plot_corrfuncs()
          << setw(10) << "$v_{2}$(CNT--BBCS--FVTXS)" << " \\\\"
          << endl;
     cout << "\\hline" << endl;
-    for (int ic = 0; ic < NC; ic++)
+    for (int ic = 0; ic < NCRESUM; ic++)
     {
       cout << setw(5) << energy << " & "
            << setw(10) << Form("%i--%i\\%%", cl[ic], ch[ic]) << " & "
