@@ -41,7 +41,7 @@ void plot_energydep()
 
   const char* inFile = "correlations.root";
 
-  bool printPlots = true;
+  bool printPlots = false;
 
   const int NE = 3;
   int energy[] = {200, 62, 39, 20};

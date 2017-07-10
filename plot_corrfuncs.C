@@ -55,15 +55,19 @@ void plot_corrfuncs()
   // SET RUNNING CONDITIONS
   //==========================================================================//
 
-  int energy = 200;
+  int energy = 62;
+
+  char fname[500];
+  sprintf(fname, "rootfiles/CorrFuncdAuBES_dAu%i.root", energy);
+  // sprintf(fname, "rootfiles/ampt/Run16dAu200_ampt.root");
 
   bool printPlots = false;
   bool saveHistos = false;
-  const char* outFile = "correlations.root";
+  const char* outFile = "correlations_EW_dAu62.root";
   bool printTables = false;
 
   // plotting options
-  bool plot_CORRPT = true;
+  bool plot_CORRPT = false;
   bool plot_FGBG = false;
   bool plot_CORR = true;
 
@@ -95,64 +99,89 @@ void plot_corrfuncs()
   // pT integrated limits (bin limits)
   // int ptsuml = 3;
   // int ptsumh = 5;
+  // int ptsuml = 0;
+  // int ptsumh = NPT - 1;
+  // int ptsuml = 1;
+  // int ptsumh = 13;
+  // // 1 < pT < 3 GeV
+  // int ptsuml = 4;
+  // int ptsumh = NPT-3;
+  // 0.2 < pT < 1.0 GeV
   int ptsuml = 0;
-  int ptsumh = NPT - 1;
+  int ptsumh = 3;
 
 
   // Resumming over Centrality
-  // const int NCRESUM = 6;
-  // int resum_icl[] = {0, 1, 2, 3, 4, 5};
-  // int resum_ich[] = {0, 1, 2, 3, 4, 5};
 
+  //-- 200 & 62 GeV
+  const int NCRESUM = 6;
+  int resum_icl[] = {0, 1, 2, 3, 4, 5};
+  int resum_ich[] = {0, 1, 2, 3, 4, 5};
+
+  //-- 39 GeV
   // const int NCRESUM = 5;
   // int resum_icl[] = {0, 2, 3, 4, 5}; // >=
   // int resum_ich[] = {1, 2, 3, 4, 5}; // <=
-  const int NCRESUM = 4;
-  int resum_icl[] = {0, 3, 4, 5}; // >=
-  int resum_ich[] = {2, 3, 4, 5}; // <=
+
+  // //-- 20 GeV
+  // const int NCRESUM = 4;
+  // int resum_icl[] = {0, 3, 4, 5}; // >=
+  // int resum_ich[] = {2, 3, 4, 5}; // <=
 
 
   // correlations between detectors
-  const int NCORRPT = 4; // number of correlations with pT binning
-  const int NCORR = 9;   // number of correlations
+  // const int NCORRPT = 4; // number of correlations with pT binning
+  // const int NCORR = 9;   // number of correlations
+  const int NCORRPT = 6; // number of correlations with pT binning
+  const int NCORR = 12;   // number of correlations
   enum CORR {
     CNTBBCS = 0,
-    CNTBBCN = 1,
-    CNTFVTXS = 2,
-    CNTFVTXN = 3,
-    BBCNBBCS = 4,
-    BBCNFVTXS = 5,
-    FVTXNBBCS = 6,
-    FVTXNFVTXS = 7,
-    BBCSFVTXS = 8,
+    CNTBBCN,
+    CNTFVTXS,
+    CNTEFVTXS,
+    CNTWFVTXS,
+    CNTFVTXN,
+    BBCNBBCS,
+    BBCNFVTXS,
+    FVTXNBBCS,
+    FVTXNFVTXS,
+    BBCSFVTXS,
+    BBCNFVTXN,
   }; // Note: These better be in the same order as cCorr[]!!!
   const char *cCorr[] =
   {
     "CNTBBCS",
     "CNTBBCN",
     "CNTFVTXS",
+    "CNTEFVTXS",
+    "CNTWFVTXS",
     "CNTFVTXN",
     "BBCNBBCS",
     "BBCNFVTXS",
     "FVTXNBBCS",
     "FVTXNFVTXS",
     "BBCSFVTXS",
+    "BBCNFVTXN",
   };
   int corrColor[] =  {kRed, kAzure, kBlue, kMagenta + 2,
                       kYellow + 2, kOrange + 2, kAzure + 5, kGreen + 2,
-                      kGray,
+                      kGray, kSpring + 2, kBlack, kGray,
                      };
   int corrMarker[] = {kFullDiamond, kFullCross, kFullCircle, kFullSquare,
                       kOpenDiamond, kOpenCross,
                       kOpenSquare, kOpenCircle,
-                      kFullStar,
+                      kFullStar, kOpenStar,
+                      kOpenCircle, kFullCircle,
                      };
 
   // Rebin values
-  // Initialize all to 4, but make some 8
+  // Initialize all to 4, but make some different
   vector<int> corrRebin(NCORR, 4);
   corrRebin[BBCNBBCS] = 8;
-  corrRebin[CNTBBCN] = 8;
+  // corrRebin[CNTBBCN] = 8;
+  corrRebin[FVTXNFVTXS] = 2;
+  // corrRebin[CNTFVTXS] = 2;
+  // corrRebin[CNTBBCS] = 2;
   if (energy == 20)
   {
     corrRebin[CNTBBCS] = 8;
@@ -203,9 +232,6 @@ void plot_corrfuncs()
 
   //-- fitting
 
-  // TF1* fcorr = new TF1("fcorr",
-  //                      "1 + 2*[0]*TMath::Cos(x) + 2*[1]*TMath::Cos(2*x) + 2*[2]*TMath::Cos(3*x) + 2*[3]*TMath::Cos(4*x) + 2*[4]*TMath::Cos(5*x)",
-  //                      -1 * TMath::Pi() / 2., 3 * TMath::Pi() / 2.);
   TF1* fcorr = new TF1("fcorr",
                        "1 + 2*[0]*TMath::Cos(x) + 2*[1]*TMath::Cos(2*x) + 2*[2]*TMath::Cos(3*x) + 2*[3]*TMath::Cos(4*x)",
                        -1 * TMath::Pi() / 2., 3 * TMath::Pi() / 2.);
@@ -268,6 +294,25 @@ void plot_corrfuncs()
   TGraphErrors *gvn_CNTBBCSBBCN_mult[NPAR];
   TGraphErrors *gvn_CNTBBCSBBCN_pT[NCRESUM][NPAR];
 
+  ValErr vn_CNTBBCNFVTXN_cent[NCRESUM][NPAR];
+  ValErr vn_CNTBBCNFVTXN_pT[NCRESUM][NPAR][NPT];
+  TGraphErrors *gvn_CNTBBCNFVTXN_cent[NPAR];
+  TGraphErrors *gvn_CNTBBCNFVTXN_mult[NPAR];
+  TGraphErrors *gvn_CNTBBCNFVTXN_pT[NCRESUM][NPAR];
+
+  ValErr vn_CNTEBBCSFVTXS_cent[NCRESUM][NPAR];
+  ValErr vn_CNTEBBCSFVTXS_pT[NCRESUM][NPAR][NPT];
+  TGraphErrors *gvn_CNTEBBCSFVTXS_cent[NPAR];
+  TGraphErrors *gvn_CNTEBBCSFVTXS_mult[NPAR];
+  TGraphErrors *gvn_CNTEBBCSFVTXS_pT[NCRESUM][NPAR];
+
+  ValErr vn_CNTWBBCSFVTXS_cent[NCRESUM][NPAR];
+  ValErr vn_CNTWBBCSFVTXS_pT[NCRESUM][NPAR][NPT];
+  TGraphErrors *gvn_CNTWBBCSFVTXS_cent[NPAR];
+  TGraphErrors *gvn_CNTWBBCSFVTXS_mult[NPAR];
+  TGraphErrors *gvn_CNTWBBCSFVTXS_pT[NCRESUM][NPAR];
+
+
   ValErr vn_num_CNTBBCSFVTXN_cent[NCRESUM][NPAR];
   TGraphErrors *gvn_num_CNTBBCSFVTXN_mult[NPAR];
 
@@ -279,11 +324,33 @@ void plot_corrfuncs()
   TGraphErrors* gv2fitrat_CNTBBCSFVTXN;
   TGraphErrors* gv2fitrat_CNTFVTXSBBCN;
   TGraphErrors* gv2fitrat_CNTBBCSBBCN;
+  TGraphErrors* gv2fitrat_CNTBBCNFVTXN;
+  TGraphErrors* gv2fitrat_CNTEBBCSFVTXS;
+  TGraphErrors* gv2fitrat_CNTWBBCSFVTXS;
+
+
+
+  TGraphErrors *gvn_CNTBBCSFVTXS_eta[NPAR];
+  TGraphErrors *gvn_CNTBBCNFVTXN_eta[NPAR];
+  TGraphErrors *gvn_CNTFVTXNFVTXS_eta[NPAR];
+  TGraphErrors *gvn_CNTBBCNBBCS_eta[NPAR];
+  TGraphErrors *gvn_CNTFVTXNBBCS_eta[NPAR];
+  TGraphErrors *gvn_FVTXNFVTXSBBCS_eta[NPAR];
+  TGraphErrors *gvn_BBCNBBCSFVTXS_eta[NPAR];
+
+  TGraphErrors *gvn_cntrat_CNTBBCSFVTXS_eta[NPAR];
+  TGraphErrors *gvn_cntrat_CNTBBCNFVTXN_eta[NPAR];
+  TGraphErrors *gvn_cntrat_CNTFVTXNFVTXS_eta[NPAR];
+  TGraphErrors *gvn_cntrat_CNTBBCNBBCS_eta[NPAR];
+  TGraphErrors *gvn_cntrat_CNTFVTXNBBCS_eta[NPAR];
+  TGraphErrors *gvn_cntrat_FVTXNFVTXSBBCS_eta[NPAR];
+  TGraphErrors *gvn_cntrat_BBCNBBCSFVTXS_eta[NPAR];
+
+
 
 
   //-- temp stuff
   char hname[500];
-  char fname[500];
 
   TH2D* h2tmp;
   TH1D* h1tmp;
@@ -293,7 +360,7 @@ void plot_corrfuncs()
   //==========================================================================//
   cout << endl;
 
-  sprintf(fname, "rootfiles/CorrFuncdAuBES_dAu%i.root", energy);
+
   TFile *fin = TFile::Open(fname);
   if (!fin)
   {
@@ -496,6 +563,36 @@ void plot_corrfuncs()
 
 
 
+  //-- Get PC1 multiplicity in each centrality bin
+  hnpc1centrality = (TH2D*) fin->Get("TH2_npc1_centrality");
+  if (!hnpc1centrality)
+  {
+    cout << "ERROR!! Unable to find hnpc1_centrality in " << fname << endl;
+    return;
+  }
+  hnpc1centrality->SetName(Form("hnpc1centrality_dAu%i", energy));
+  hnpc1centrality->SetDirectory(0);
+
+  for (int ic = 0; ic < NCRESUM; ic++)
+  {
+    int bl = hnpc1centrality->GetXaxis()->FindBin(cl[resum_icl[ic]]);
+    int bh = hnpc1centrality->GetXaxis()->FindBin(ch[resum_ich[ic]] - 1);
+
+    hnpc1_cent[ic] = (TH1D*) hnpc1centrality->ProjectionY(
+                       Form("hnpc1_cent_dAu%i_c%i", energy, ic),
+                       bl, bh);
+    hnpc1_cent[ic]->SetDirectory(0);
+    hnpc1_cent[ic]->SetLineColor(centColor[ic]);
+    hnpc1_cent[ic]->Scale(1. / ((double)(ch[ic] - cl[ic])));
+
+    mean_npc1[ic].first = hnpc1_cent[ic]->GetMean();
+    mean_npc1[ic].second = hnpc1_cent[ic]->GetRMS();
+
+  }
+
+
+
+
   fin->Close();
   delete fin;
 
@@ -645,52 +742,6 @@ void plot_corrfuncs()
 
 
   //==========================================================================//
-  // READ THE MULTIPLICITY HISTOGRAMS FROM FILE
-  //==========================================================================//
-  cout << endl;
-
-  sprintf(fname, "rootfiles/Histos_CorrFuncdAuBES_dAu%i.root", energy);
-  fin = TFile::Open(fname);
-  if (!fin)
-  {
-    cout << "ERROR!! Unable to open " << fname << endl;
-    return;
-  }
-  cout << "--> For dAu" << energy << " Getting histograms from:"
-       << fname << endl;
-
-
-  //-- Get PC1 multiplicity in each centrality bin
-  hnpc1centrality = (TH2D*) fin->Get("hnpc1_centrality");
-  if (!hnpc1centrality)
-  {
-    cout << "ERROR!! Unable to find hnpc1_centrality in " << fname << endl;
-    return;
-  }
-  hnpc1centrality->SetName(Form("hnpc1centrality_dAu%i", energy));
-  hnpc1centrality->SetDirectory(0);
-
-  for (int ic = 0; ic < NCRESUM; ic++)
-  {
-    int bl = hnpc1centrality->GetXaxis()->FindBin(cl[resum_icl[ic]]);
-    int bh = hnpc1centrality->GetXaxis()->FindBin(ch[resum_ich[ic]] - 1);
-
-    hnpc1_cent[ic] = (TH1D*) hnpc1centrality->ProjectionY(
-                       Form("hnpc1_cent_dAu%i_c%i", energy, ic),
-                       bl, bh);
-    hnpc1_cent[ic]->SetDirectory(0);
-    hnpc1_cent[ic]->SetLineColor(centColor[ic]);
-    hnpc1_cent[ic]->Scale(1. / ((double)(ch[ic] - cl[ic])));
-
-    mean_npc1[ic].first = hnpc1_cent[ic]->GetMean();
-    mean_npc1[ic].second = hnpc1_cent[ic]->GetRMS();
-
-  }
-
-  fin->Close();
-  delete fin;
-
-  //==========================================================================//
   // CALCULTATE MEAN DELTA ETA
   //==========================================================================//
   cout << endl;
@@ -702,18 +753,6 @@ void plot_corrfuncs()
     for (int ic = 0; ic < NCRESUM; ic++)
     {
       mdeta[icorr][ic] = deta[icorr][ic]->GetMean();
-
-      //-- Temporary until 2D histos get fixed!!
-      if (mdeta[icorr][ic] == 0 && icorr == BBCNBBCS)
-        mdeta[icorr][ic] = 7.0;
-      if (mdeta[icorr][ic] == 0 && icorr == FVTXNFVTXS)
-        mdeta[icorr][ic] = 4.0;
-      if (mdeta[icorr][ic] == 0 && icorr == BBCNFVTXS)
-        mdeta[icorr][ic] = 5.5;
-      if (mdeta[icorr][ic] == 0 && icorr == FVTXNBBCS)
-        mdeta[icorr][ic] = 5.5;
-
-
 
       cout << "    " << cl[ic] << "-" << ch[ic] << ": " << mdeta[icorr][ic] << endl;
     }
@@ -1264,95 +1303,95 @@ void plot_corrfuncs()
 
 
 
-  //--CNT-FVTXS-BBCN
-  for (int j = 0; j < NPAR; j++)
-  {
-    // centrality dependence
-    gvn_CNTFVTXSBBCN_cent[j] = new TGraphErrors();
-    sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_cent", j + 1, energy);
-    gvn_CNTFVTXSBBCN_cent[j]->SetName(hname);
-    gvn_CNTFVTXSBBCN_cent[j]->SetMarkerStyle(kFullCross);
-    gvn_CNTFVTXSBBCN_cent[j]->SetMarkerColor(kMagenta + 2);
-    gvn_CNTFVTXSBBCN_cent[j]->SetLineColor(kMagenta + 2);
-    gvn_CNTFVTXSBBCN_cent[j]->SetMinimum(100);
+  // //--CNT-FVTXS-BBCN
+  // for (int j = 0; j < NPAR; j++)
+  // {
+  //   // centrality dependence
+  //   gvn_CNTFVTXSBBCN_cent[j] = new TGraphErrors();
+  //   sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_cent", j + 1, energy);
+  //   gvn_CNTFVTXSBBCN_cent[j]->SetName(hname);
+  //   gvn_CNTFVTXSBBCN_cent[j]->SetMarkerStyle(kFullCross);
+  //   gvn_CNTFVTXSBBCN_cent[j]->SetMarkerColor(kMagenta + 2);
+  //   gvn_CNTFVTXSBBCN_cent[j]->SetLineColor(kMagenta + 2);
+  //   gvn_CNTFVTXSBBCN_cent[j]->SetMinimum(100);
 
-    // multiplicity dependence
-    gvn_CNTFVTXSBBCN_mult[j] = new TGraphErrors();
-    sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_mult", j + 1, energy);
-    gvn_CNTFVTXSBBCN_mult[j]->SetName(hname);
-    gvn_CNTFVTXSBBCN_mult[j]->SetMarkerStyle(kFullCross);
-    gvn_CNTFVTXSBBCN_mult[j]->SetMarkerColor(kMagenta + 2);
-    gvn_CNTFVTXSBBCN_mult[j]->SetLineColor(kMagenta + 2);
-    gvn_CNTFVTXSBBCN_mult[j]->SetMinimum(100);
+  //   // multiplicity dependence
+  //   gvn_CNTFVTXSBBCN_mult[j] = new TGraphErrors();
+  //   sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_mult", j + 1, energy);
+  //   gvn_CNTFVTXSBBCN_mult[j]->SetName(hname);
+  //   gvn_CNTFVTXSBBCN_mult[j]->SetMarkerStyle(kFullCross);
+  //   gvn_CNTFVTXSBBCN_mult[j]->SetMarkerColor(kMagenta + 2);
+  //   gvn_CNTFVTXSBBCN_mult[j]->SetLineColor(kMagenta + 2);
+  //   gvn_CNTFVTXSBBCN_mult[j]->SetMinimum(100);
 
-    for (int ic = 0; ic < NCRESUM; ic++)
-    {
+  //   for (int ic = 0; ic < NCRESUM; ic++)
+  //   {
 
-      vn_CNTFVTXSBBCN_cent[ic][j] = vn_3sub(
-                                      cn[CNTFVTXS][ic][j],
-                                      cn[CNTBBCN][ic][j],
-                                      cn[BBCNFVTXS][ic][j] );
+  //     vn_CNTFVTXSBBCN_cent[ic][j] = vn_3sub(
+  //                                     cn[CNTFVTXS][ic][j],
+  //                                     cn[CNTBBCN][ic][j],
+  //                                     cn[BBCNFVTXS][ic][j] );
 
-      //fill centrality tgraph
-      gvn_CNTFVTXSBBCN_cent[j]->SetPoint(ic, ic + 0.5 - 2 * cshift, vn_CNTFVTXSBBCN_cent[ic][j].first);
-      gvn_CNTFVTXSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTFVTXSBBCN_cent[ic][j].second);
+  //     //fill centrality tgraph
+  //     gvn_CNTFVTXSBBCN_cent[j]->SetPoint(ic, ic + 0.5 - 2 * cshift, vn_CNTFVTXSBBCN_cent[ic][j].first);
+  //     gvn_CNTFVTXSBBCN_cent[j]->SetPointError(ic, 0, vn_CNTFVTXSBBCN_cent[ic][j].second);
 
-      if (vn_CNTFVTXSBBCN_cent[ic][j].first > gvn_CNTFVTXSBBCN_cent[j]->GetMaximum())
-        gvn_CNTFVTXSBBCN_cent[j]->SetMaximum(vn_CNTFVTXSBBCN_cent[ic][j].first);
-      if (vn_CNTFVTXSBBCN_cent[ic][j].first < gvn_CNTFVTXSBBCN_cent[j]->GetMinimum())
-        gvn_CNTFVTXSBBCN_cent[j]->SetMinimum(vn_CNTFVTXSBBCN_cent[ic][j].first);
+  //     if (vn_CNTFVTXSBBCN_cent[ic][j].first > gvn_CNTFVTXSBBCN_cent[j]->GetMaximum())
+  //       gvn_CNTFVTXSBBCN_cent[j]->SetMaximum(vn_CNTFVTXSBBCN_cent[ic][j].first);
+  //     if (vn_CNTFVTXSBBCN_cent[ic][j].first < gvn_CNTFVTXSBBCN_cent[j]->GetMinimum())
+  //       gvn_CNTFVTXSBBCN_cent[j]->SetMinimum(vn_CNTFVTXSBBCN_cent[ic][j].first);
 
-      //fill multiplicity tgraph
-      gvn_CNTFVTXSBBCN_mult[j]->SetPoint(ic,
-                                         mean_npc1[ic].first,
-                                         vn_CNTFVTXSBBCN_cent[ic][j].first);
-      gvn_CNTFVTXSBBCN_mult[j]->SetPointError(ic, 0, vn_CNTFVTXSBBCN_cent[ic][j].second);
+  //     //fill multiplicity tgraph
+  //     gvn_CNTFVTXSBBCN_mult[j]->SetPoint(ic,
+  //                                        mean_npc1[ic].first,
+  //                                        vn_CNTFVTXSBBCN_cent[ic][j].first);
+  //     gvn_CNTFVTXSBBCN_mult[j]->SetPointError(ic, 0, vn_CNTFVTXSBBCN_cent[ic][j].second);
 
-      if (vn_CNTFVTXSBBCN_cent[ic][j].first > gvn_CNTFVTXSBBCN_mult[j]->GetMaximum())
-        gvn_CNTFVTXSBBCN_mult[j]->SetMaximum(vn_CNTFVTXSBBCN_cent[ic][j].first);
-      if (vn_CNTFVTXSBBCN_cent[ic][j].first < gvn_CNTFVTXSBBCN_mult[j]->GetMinimum())
-        gvn_CNTFVTXSBBCN_mult[j]->SetMinimum(vn_CNTFVTXSBBCN_cent[ic][j].first);
+  //     if (vn_CNTFVTXSBBCN_cent[ic][j].first > gvn_CNTFVTXSBBCN_mult[j]->GetMaximum())
+  //       gvn_CNTFVTXSBBCN_mult[j]->SetMaximum(vn_CNTFVTXSBBCN_cent[ic][j].first);
+  //     if (vn_CNTFVTXSBBCN_cent[ic][j].first < gvn_CNTFVTXSBBCN_mult[j]->GetMinimum())
+  //       gvn_CNTFVTXSBBCN_mult[j]->SetMinimum(vn_CNTFVTXSBBCN_cent[ic][j].first);
 
-    }
+  //   }
 
-    //pT dependence
-    for (int ic = 0; ic < NCRESUM; ic++)
-    {
-      gvn_CNTFVTXSBBCN_pT[ic][j] = new TGraphErrors();
-      sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_pT_c%i", j + 1, energy, ic);
-      gvn_CNTFVTXSBBCN_pT[ic][j]->SetName(hname);
-      gvn_CNTFVTXSBBCN_pT[ic][j]->SetMarkerStyle(kFullCross);
-      gvn_CNTFVTXSBBCN_pT[ic][j]->SetMarkerColor(kMagenta + 2);
-      gvn_CNTFVTXSBBCN_pT[ic][j]->SetLineColor(kMagenta + 2);
-      gvn_CNTFVTXSBBCN_pT[ic][j]->SetMinimum(100);
+  //   //pT dependence
+  //   for (int ic = 0; ic < NCRESUM; ic++)
+  //   {
+  //     gvn_CNTFVTXSBBCN_pT[ic][j] = new TGraphErrors();
+  //     sprintf(hname, "gv%i_dAu%i_CNTFVTXSBBCN_pT_c%i", j + 1, energy, ic);
+  //     gvn_CNTFVTXSBBCN_pT[ic][j]->SetName(hname);
+  //     gvn_CNTFVTXSBBCN_pT[ic][j]->SetMarkerStyle(kFullCross);
+  //     gvn_CNTFVTXSBBCN_pT[ic][j]->SetMarkerColor(kMagenta + 2);
+  //     gvn_CNTFVTXSBBCN_pT[ic][j]->SetLineColor(kMagenta + 2);
+  //     gvn_CNTFVTXSBBCN_pT[ic][j]->SetMinimum(100);
 
-      for (int ipt = 0; ipt < NPT; ipt++)
-      {
-        vn_CNTFVTXSBBCN_pT[ic][j][ipt] = vn_3sub(
-                                           cn_pt[CNTFVTXS][ic][ipt][j],
-                                           cn_pt[CNTBBCN][ic][ipt][j],
-                                           cn[BBCNFVTXS][ic][j] );
+  //     for (int ipt = 0; ipt < NPT; ipt++)
+  //     {
+  //       vn_CNTFVTXSBBCN_pT[ic][j][ipt] = vn_3sub(
+  //                                          cn_pt[CNTFVTXS][ic][ipt][j],
+  //                                          cn_pt[CNTBBCN][ic][ipt][j],
+  //                                          cn[BBCNFVTXS][ic][j] );
 
-        //fill tgraph
-        gvn_CNTFVTXSBBCN_pT[ic][j]->SetPoint(ipt,
-                                             0.5 * (ptl[ipt] + pth[ipt]) - 2 * ptshift,
-                                             vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
-        gvn_CNTFVTXSBBCN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTFVTXSBBCN_pT[ic][j][ipt].second);
+  //       //fill tgraph
+  //       gvn_CNTFVTXSBBCN_pT[ic][j]->SetPoint(ipt,
+  //                                            0.5 * (ptl[ipt] + pth[ipt]) - 2 * ptshift,
+  //                                            vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
+  //       gvn_CNTFVTXSBBCN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTFVTXSBBCN_pT[ic][j][ipt].second);
 
-        if (vn_CNTFVTXSBBCN_pT[ic][j][ipt].first > gvn_CNTFVTXSBBCN_pT[ic][j]->GetMaximum())
-          gvn_CNTFVTXSBBCN_pT[ic][j]->SetMaximum(vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
-        if (vn_CNTFVTXSBBCN_pT[ic][j][ipt].first < gvn_CNTFVTXSBBCN_pT[ic][j]->GetMinimum())
-          gvn_CNTFVTXSBBCN_pT[ic][j]->SetMinimum(vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
+  //       if (vn_CNTFVTXSBBCN_pT[ic][j][ipt].first > gvn_CNTFVTXSBBCN_pT[ic][j]->GetMaximum())
+  //         gvn_CNTFVTXSBBCN_pT[ic][j]->SetMaximum(vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
+  //       if (vn_CNTFVTXSBBCN_pT[ic][j][ipt].first < gvn_CNTFVTXSBBCN_pT[ic][j]->GetMinimum())
+  //         gvn_CNTFVTXSBBCN_pT[ic][j]->SetMinimum(vn_CNTFVTXSBBCN_pT[ic][j][ipt].first);
 
-      }
+  //     }
 
-    }
-  } // j
-
-
+  //   }
+  // } // j
 
 
-  //--CNT-BBCS-FVTXN
+
+
+  //--CNT-BBCN-BBCS
   for (int j = 0; j < NPAR; j++)
   {
     // centrality dependence
@@ -1438,6 +1477,93 @@ void plot_corrfuncs()
   } // j
 
 
+  //--CNT-BBCN-FVTXN
+  for (int j = 0; j < NPAR; j++)
+  {
+    // centrality dependence
+    gvn_CNTBBCNFVTXN_cent[j] = new TGraphErrors();
+    sprintf(hname, "gv%i_dAu%i_CNTBBCNFVTXN_cent", j + 1, energy);
+    gvn_CNTBBCNFVTXN_cent[j]->SetName(hname);
+    gvn_CNTBBCNFVTXN_cent[j]->SetMarkerStyle(kOpenSquare);
+    gvn_CNTBBCNFVTXN_cent[j]->SetMarkerColor(kMagenta + 2);
+    gvn_CNTBBCNFVTXN_cent[j]->SetLineColor(kMagenta + 2);
+    gvn_CNTBBCNFVTXN_cent[j]->SetMinimum(100);
+
+    // multiplicity dependence
+    gvn_CNTBBCNFVTXN_mult[j] = new TGraphErrors();
+    sprintf(hname, "gv%i_dAu%i_CNTBBCNFVTXN_mult", j + 1, energy);
+    gvn_CNTBBCNFVTXN_mult[j]->SetName(hname);
+    gvn_CNTBBCNFVTXN_mult[j]->SetMarkerStyle(kOpenSquare);
+    gvn_CNTBBCNFVTXN_mult[j]->SetMarkerColor(kMagenta + 2);
+    gvn_CNTBBCNFVTXN_mult[j]->SetLineColor(kMagenta + 2);
+    gvn_CNTBBCNFVTXN_mult[j]->SetMinimum(100);
+
+    for (int ic = 0; ic < NCRESUM; ic++)
+    {
+
+      vn_CNTBBCNFVTXN_cent[ic][j] = vn_3sub(
+                                      cn[CNTBBCN][ic][j],
+                                      cn[CNTFVTXN][ic][j],
+                                      cn[BBCNFVTXN][ic][j] );
+
+      //fill centrality tgraph
+      gvn_CNTBBCNFVTXN_cent[j]->SetPoint(ic, ic + 0.5 - cshift, vn_CNTBBCNFVTXN_cent[ic][j].first);
+      gvn_CNTBBCNFVTXN_cent[j]->SetPointError(ic, 0, vn_CNTBBCNFVTXN_cent[ic][j].second);
+
+      if (vn_CNTBBCNFVTXN_cent[ic][j].first > gvn_CNTBBCNFVTXN_cent[j]->GetMaximum())
+        gvn_CNTBBCNFVTXN_cent[j]->SetMaximum(vn_CNTBBCNFVTXN_cent[ic][j].first);
+      if (vn_CNTBBCNFVTXN_cent[ic][j].first < gvn_CNTBBCNFVTXN_cent[j]->GetMinimum())
+        gvn_CNTBBCNFVTXN_cent[j]->SetMinimum(vn_CNTBBCNFVTXN_cent[ic][j].first);
+
+      //fill multiplicity tgraph
+      gvn_CNTBBCNFVTXN_mult[j]->SetPoint(ic,
+                                         mean_npc1[ic].first,
+                                         vn_CNTBBCNFVTXN_cent[ic][j].first);
+      gvn_CNTBBCNFVTXN_mult[j]->SetPointError(ic, 0, vn_CNTBBCNFVTXN_cent[ic][j].second);
+
+      if (vn_CNTBBCNFVTXN_cent[ic][j].first > gvn_CNTBBCNFVTXN_mult[j]->GetMaximum())
+        gvn_CNTBBCNFVTXN_mult[j]->SetMaximum(vn_CNTBBCNFVTXN_cent[ic][j].first);
+      if (vn_CNTBBCNFVTXN_cent[ic][j].first < gvn_CNTBBCNFVTXN_mult[j]->GetMinimum())
+        gvn_CNTBBCNFVTXN_mult[j]->SetMinimum(vn_CNTBBCNFVTXN_cent[ic][j].first);
+    }
+
+    //pT dependence
+    for (int ic = 0; ic < NCRESUM; ic++)
+    {
+      gvn_CNTBBCNFVTXN_pT[ic][j] = new TGraphErrors();
+      sprintf(hname, "gv%i_dAu%i_CNTBBCNFVTXN_pT_c%i", j + 1, energy, ic);
+      gvn_CNTBBCNFVTXN_pT[ic][j]->SetName(hname);
+      gvn_CNTBBCNFVTXN_pT[ic][j]->SetMarkerStyle(kOpenSquare);
+      gvn_CNTBBCNFVTXN_pT[ic][j]->SetMarkerColor(kMagenta + 2);
+      gvn_CNTBBCNFVTXN_pT[ic][j]->SetLineColor(kMagenta + 2);
+      gvn_CNTBBCNFVTXN_pT[ic][j]->SetMinimum(100);
+
+      for (int ipt = 0; ipt < NPT; ipt++)
+      {
+
+        vn_CNTBBCNFVTXN_pT[ic][j][ipt] = vn_3sub(
+                                           cn_pt[CNTBBCN][ic][ipt][j],
+                                           cn_pt[CNTFVTXN][ic][ipt][j],
+                                           cn[BBCNFVTXN][ic][j] );
+
+        //fill tgraph
+        gvn_CNTBBCNFVTXN_pT[ic][j]->SetPoint(ipt,
+                                             0.5 * (ptl[ipt] + pth[ipt]) - ptshift,
+                                             vn_CNTBBCNFVTXN_pT[ic][j][ipt].first);
+        gvn_CNTBBCNFVTXN_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCNFVTXN_pT[ic][j][ipt].second);
+
+        if (vn_CNTBBCNFVTXN_pT[ic][j][ipt].first > gvn_CNTBBCNFVTXN_pT[ic][j]->GetMaximum())
+          gvn_CNTBBCNFVTXN_pT[ic][j]->SetMaximum(vn_CNTBBCNFVTXN_pT[ic][j][ipt].first);
+        if (vn_CNTBBCNFVTXN_pT[ic][j][ipt].first < gvn_CNTBBCNFVTXN_pT[ic][j]->GetMinimum())
+          gvn_CNTBBCNFVTXN_pT[ic][j]->SetMinimum(vn_CNTBBCNFVTXN_pT[ic][j][ipt].first);
+
+      }
+
+    }
+  } // j
+
+
+
 
 
   //--CNT-BBCS-FVTXN (numerical C_n's)
@@ -1472,6 +1598,496 @@ void plot_corrfuncs()
         gvn_num_CNTBBCSFVTXN_mult[j]->SetMinimum(vn_num_CNTBBCSFVTXN_cent[ic][j].first);
 
     } // ic
+  } // j
+
+
+
+
+  //--CNT-BBCS-FVTXS
+  for (int j = 0; j < NPAR; j++)
+  {
+    // centrality dependence
+    gvn_CNTBBCSFVTXS_cent[j] = new TGraphErrors();
+    sprintf(hname, "gv%i_dAu%i_CNTBBCSFVTXS_cent", j + 1, energy);
+    gvn_CNTBBCSFVTXS_cent[j]->SetName(hname);
+    gvn_CNTBBCSFVTXS_cent[j]->SetMarkerStyle(kFullSquare);
+    gvn_CNTBBCSFVTXS_cent[j]->SetMarkerColor(kRed);
+    gvn_CNTBBCSFVTXS_cent[j]->SetLineColor(kRed);
+    gvn_CNTBBCSFVTXS_cent[j]->SetMinimum(100);
+
+    // multiplicity dependence
+    gvn_CNTBBCSFVTXS_mult[j] = new TGraphErrors();
+    sprintf(hname, "gv%i_dAu%i_CNTBBCSFVTXS_mult", j + 1, energy);
+    gvn_CNTBBCSFVTXS_mult[j]->SetName(hname);
+    gvn_CNTBBCSFVTXS_mult[j]->SetMarkerStyle(kFullSquare);
+    gvn_CNTBBCSFVTXS_mult[j]->SetMarkerColor(kRed);
+    gvn_CNTBBCSFVTXS_mult[j]->SetLineColor(kRed);
+    gvn_CNTBBCSFVTXS_mult[j]->SetMinimum(100);
+
+    for (int ic = 0; ic < NCRESUM; ic++)
+    {
+
+      vn_CNTBBCSFVTXS_cent[ic][j] = vn_3sub(
+                                      cn[CNTBBCS][ic][j],
+                                      cn[CNTFVTXS][ic][j],
+                                      cn[BBCSFVTXS][ic][j] );
+
+      //fill centrality tgraph
+      gvn_CNTBBCSFVTXS_cent[j]->SetPoint(ic, ic + 0.5 - cshift, vn_CNTBBCSFVTXS_cent[ic][j].first);
+      gvn_CNTBBCSFVTXS_cent[j]->SetPointError(ic, 0, vn_CNTBBCSFVTXS_cent[ic][j].second);
+
+      if (vn_CNTBBCSFVTXS_cent[ic][j].first > gvn_CNTBBCSFVTXS_cent[j]->GetMaximum())
+        gvn_CNTBBCSFVTXS_cent[j]->SetMaximum(vn_CNTBBCSFVTXS_cent[ic][j].first);
+      if (vn_CNTBBCSFVTXS_cent[ic][j].first < gvn_CNTBBCSFVTXS_cent[j]->GetMinimum())
+        gvn_CNTBBCSFVTXS_cent[j]->SetMinimum(vn_CNTBBCSFVTXS_cent[ic][j].first);
+
+      //fill multiplicity tgraph
+      gvn_CNTBBCSFVTXS_mult[j]->SetPoint(ic,
+                                         mean_npc1[ic].first,
+                                         vn_CNTBBCSFVTXS_cent[ic][j].first);
+      gvn_CNTBBCSFVTXS_mult[j]->SetPointError(ic, 0, vn_CNTBBCSFVTXS_cent[ic][j].second);
+
+      if (vn_CNTBBCSFVTXS_cent[ic][j].first > gvn_CNTBBCSFVTXS_mult[j]->GetMaximum())
+        gvn_CNTBBCSFVTXS_mult[j]->SetMaximum(vn_CNTBBCSFVTXS_cent[ic][j].first);
+      if (vn_CNTBBCSFVTXS_cent[ic][j].first < gvn_CNTBBCSFVTXS_mult[j]->GetMinimum())
+        gvn_CNTBBCSFVTXS_mult[j]->SetMinimum(vn_CNTBBCSFVTXS_cent[ic][j].first);
+    }
+
+    //pT dependence
+    for (int ic = 0; ic < NCRESUM; ic++)
+    {
+      gvn_CNTBBCSFVTXS_pT[ic][j] = new TGraphErrors();
+      sprintf(hname, "gv%i_dAu%i_CNTBBCSFVTXS_pT_c%i", j + 1, energy, ic);
+      gvn_CNTBBCSFVTXS_pT[ic][j]->SetName(hname);
+      gvn_CNTBBCSFVTXS_pT[ic][j]->SetMarkerStyle(kFullSquare);
+      gvn_CNTBBCSFVTXS_pT[ic][j]->SetMarkerColor(kRed);
+      gvn_CNTBBCSFVTXS_pT[ic][j]->SetLineColor(kRed);
+      gvn_CNTBBCSFVTXS_pT[ic][j]->SetMinimum(100);
+
+      for (int ipt = 0; ipt < NPT; ipt++)
+      {
+
+        vn_CNTBBCSFVTXS_pT[ic][j][ipt] = vn_3sub(
+                                           cn_pt[CNTBBCS][ic][ipt][j],
+                                           cn_pt[CNTFVTXS][ic][ipt][j],
+                                           cn[BBCSFVTXS][ic][j] );
+
+        //fill tgraph
+        gvn_CNTBBCSFVTXS_pT[ic][j]->SetPoint(ipt,
+                                             0.5 * (ptl[ipt] + pth[ipt]) - ptshift,
+                                             vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
+        gvn_CNTBBCSFVTXS_pT[ic][j]->SetPointError(ipt, 0, vn_CNTBBCSFVTXS_pT[ic][j][ipt].second);
+
+        if (vn_CNTBBCSFVTXS_pT[ic][j][ipt].first > gvn_CNTBBCSFVTXS_pT[ic][j]->GetMaximum())
+          gvn_CNTBBCSFVTXS_pT[ic][j]->SetMaximum(vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
+        if (vn_CNTBBCSFVTXS_pT[ic][j][ipt].first < gvn_CNTBBCSFVTXS_pT[ic][j]->GetMinimum())
+          gvn_CNTBBCSFVTXS_pT[ic][j]->SetMinimum(vn_CNTBBCSFVTXS_pT[ic][j][ipt].first);
+
+      }
+
+    }
+  } // j
+
+
+
+
+  //==========================================================================//
+  // CALCULATE VN VS ETA FOR DIFFERENT COMBINATIONS
+  //==========================================================================//
+  cout << endl;
+  cout << "--> calculate vn vs eta " << endl;
+
+  ValErr vn;
+  ValErr vncnt;
+  double err;
+  for (int j = 0; j < NPAR; j++)
+  {
+    //-- CNTBBCSFVTXS
+    gvn_CNTBBCSFVTXS_eta[j] = new TGraphErrors();
+    gvn_CNTBBCSFVTXS_eta[j]->SetName(Form("gvn_CNTBBCSFVTXS_eta_%i", j));
+    gvn_CNTBBCSFVTXS_eta[j]->SetMarkerStyle(kFullSquare);
+    gvn_CNTBBCSFVTXS_eta[j]->SetMarkerColor(kRed);
+    gvn_CNTBBCSFVTXS_eta[j]->SetLineColor(kRed);
+    gvn_CNTBBCSFVTXS_eta[j]->SetMinimum(100);
+
+    gvn_cntrat_CNTBBCSFVTXS_eta[j] = new TGraphErrors();
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetName(Form("gvn_cntrat_CNTBBCSFVTXS_eta_%i", j));
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetMarkerStyle(kFullSquare);
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetMarkerColor(kRed);
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetLineColor(kRed);
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetMinimum(100);
+
+    // CNT
+    vncnt = vn_3sub(cn[CNTBBCS][0][j],
+                    cn[CNTFVTXS][0][j],
+                    cn[BBCSFVTXS][0][j] );
+
+    gvn_CNTBBCSFVTXS_eta[j]->SetPoint(0, 0, vncnt.first);
+    gvn_CNTBBCSFVTXS_eta[j]->SetPointError(0, 0, vncnt.second);
+
+    if (j == 1)
+      cout << "v2(CNTBBCSFVTXS) = " << vn.first << " +/- " << vn.second << endl;
+
+    // BBCS
+    vn = vn_3sub(cn[CNTBBCS][0][j],
+                 cn[BBCSFVTXS][0][j],
+                 cn[CNTFVTXS][0][j] );
+
+    gvn_CNTBBCSFVTXS_eta[j]->SetPoint(1, -3.25, vn.first);
+    gvn_CNTBBCSFVTXS_eta[j]->SetPointError(1, 0, vn.second);
+
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetPoint(0, -3.25, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetPointError(0, 0, err);
+
+    // FVTXS
+    vn = vn_3sub(cn[CNTFVTXS][0][j],
+                 cn[BBCSFVTXS][0][j],
+                 cn[CNTBBCS][0][j] );
+
+    gvn_CNTBBCSFVTXS_eta[j]->SetPoint(2, -2.0, vn.first);
+    gvn_CNTBBCSFVTXS_eta[j]->SetPointError(2, 0, vn.second);
+
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetPoint(1, -2.0, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCSFVTXS_eta[j]->SetPointError(1, 0, err);
+
+
+
+
+
+
+    //-- CNTBBCNFVTXN
+    gvn_CNTBBCNFVTXN_eta[j] = new TGraphErrors();
+    gvn_CNTBBCNFVTXN_eta[j]->SetName(Form("gvn_CNTBBCNFVTXN_eta_%i", j));
+    gvn_CNTBBCNFVTXN_eta[j]->SetMarkerStyle(kOpenSquare);
+    gvn_CNTBBCNFVTXN_eta[j]->SetMarkerColor(kMagenta + 2);
+    gvn_CNTBBCNFVTXN_eta[j]->SetLineColor(kMagenta + 2);
+    gvn_CNTBBCNFVTXN_eta[j]->SetMinimum(100);
+
+    gvn_cntrat_CNTBBCNFVTXN_eta[j] = new TGraphErrors();
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetName(Form("gvn_cntrat_CNTBBCNFVTXN_eta_%i", j));
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetMarkerStyle(kOpenSquare);
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetMarkerColor(kMagenta + 2);
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetLineColor(kMagenta + 2);
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetMinimum(100);
+
+    // CNT
+    vncnt = vn_3sub(cn[CNTBBCN][0][j],
+                    cn[CNTFVTXN][0][j],
+                    cn[BBCNFVTXN][0][j] );
+
+    gvn_CNTBBCNFVTXN_eta[j]->SetPoint(0, 0, vncnt.first);
+    gvn_CNTBBCNFVTXN_eta[j]->SetPointError(0, 0, vncnt.second);
+
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetPoint(0, 0, vncnt.first / vncnt.first);
+    err = vncnt.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vncnt.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetPointError(1, 0, err);
+
+    if (j == 1)
+      cout << "v2(CNTBBCNFVTXN) = " << vn.first << " +/- " << vn.second << endl;
+
+
+    // BBCN
+    vn = vn_3sub(cn[CNTBBCN][0][j],
+                 cn[BBCNFVTXN][0][j],
+                 cn[CNTFVTXN][0][j] );
+
+    gvn_CNTBBCNFVTXN_eta[j]->SetPoint(1, 3.25, vn.first);
+    gvn_CNTBBCNFVTXN_eta[j]->SetPointError(1, 0, vn.second);
+
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetPoint(1, 3.25, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetPointError(1, 0, err);
+
+
+    // FVTXN
+    vn = vn_3sub(cn[CNTFVTXN][0][j],
+                 cn[BBCNFVTXN][0][j],
+                 cn[CNTBBCN][0][j] );
+
+    gvn_CNTBBCNFVTXN_eta[j]->SetPoint(2, 2.0, vn.first);
+    gvn_CNTBBCNFVTXN_eta[j]->SetPointError(2, 0, vn.second);
+
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetPoint(2, 2.0, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCNFVTXN_eta[j]->SetPointError(2, 0, err);
+
+
+
+    //-- CNTFVTXNFVTXS
+    gvn_CNTFVTXNFVTXS_eta[j] = new TGraphErrors();
+    gvn_CNTFVTXNFVTXS_eta[j]->SetName(Form("gvn_CNTFVTXNFVTXS_eta_%i", j));
+    gvn_CNTFVTXNFVTXS_eta[j]->SetMarkerStyle(kFullCircle);
+    gvn_CNTFVTXNFVTXS_eta[j]->SetMarkerColor(kBlue);
+    gvn_CNTFVTXNFVTXS_eta[j]->SetLineColor(kBlue);
+    gvn_CNTFVTXNFVTXS_eta[j]->SetMinimum(100);
+
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j] = new TGraphErrors();
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetName(Form("gvn_cntrat_CNTFVTXNFVTXS_eta_%i", j));
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetMarkerStyle(kFullCircle);
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetMarkerColor(kBlue);
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetLineColor(kBlue);
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetMinimum(100);
+
+    // CNT
+    vncnt = vn_3sub(cn[CNTFVTXN][0][j],
+                    cn[CNTFVTXS][0][j],
+                    cn[FVTXNFVTXS][0][j] );
+
+    gvn_CNTFVTXNFVTXS_eta[j]->SetPoint(0, 0, vncnt.first);
+    gvn_CNTFVTXNFVTXS_eta[j]->SetPointError(0, 0, vncnt.second);
+
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetPoint(0, 0.0, vncnt.first / vncnt.first);
+    err = vncnt.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vncnt.second / vncnt.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetPointError(0, 0, err);
+
+
+    if (j == 1)
+      cout << "v2(CNTFVTXNFVTXS) = " << vn.first << " +/- " << vn.second << endl;
+
+
+    // FVTXN
+    vn = vn_3sub(cn[CNTFVTXN][0][j],
+                 cn[FVTXNFVTXS][0][j],
+                 cn[CNTFVTXS][0][j] );
+
+    gvn_CNTFVTXNFVTXS_eta[j]->SetPoint(1, 2.0, vn.first);
+    gvn_CNTFVTXNFVTXS_eta[j]->SetPointError(1, 0, vn.second);
+
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetPoint(1, 2.0, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetPointError(1, 0, err);
+
+
+
+    // FVTXS
+    vn = vn_3sub(cn[CNTFVTXS][0][j],
+                 cn[FVTXNFVTXS][0][j],
+                 cn[CNTFVTXN][0][j] );
+
+    gvn_CNTFVTXNFVTXS_eta[j]->SetPoint(2, -2.0, vn.first);
+    gvn_CNTFVTXNFVTXS_eta[j]->SetPointError(2, 0, vn.second);
+
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetPoint(2, -2.0, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTFVTXNFVTXS_eta[j]->SetPointError(2, 0, err);
+
+
+
+
+    //-- CNTBBCNBBCS
+    gvn_CNTBBCNBBCS_eta[j] = new TGraphErrors();
+    gvn_CNTBBCNBBCS_eta[j]->SetName(Form("gvn_CNTBBCNBBCS_eta_%i", j));
+    gvn_CNTBBCNBBCS_eta[j]->SetMarkerStyle(kOpenCircle);
+    gvn_CNTBBCNBBCS_eta[j]->SetMarkerColor(kOrange + 3);
+    gvn_CNTBBCNBBCS_eta[j]->SetLineColor(kOrange + 3);
+    gvn_CNTBBCNBBCS_eta[j]->SetMinimum(100);
+
+    gvn_cntrat_CNTBBCNBBCS_eta[j] = new TGraphErrors();
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetName(Form("gvn_cntrat_CNTBBCNBBCS_eta_%i", j));
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetMarkerStyle(kOpenCircle);
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetMarkerColor(kOrange + 3);
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetLineColor(kOrange + 3);
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetMinimum(100);
+
+    // CNT
+    vn = vn_3sub(cn[CNTBBCN][0][j],
+                 cn[CNTBBCS][0][j],
+                 cn[BBCNBBCS][0][j] );
+
+    gvn_CNTBBCNBBCS_eta[j]->SetPoint(0, 0, vn.first);
+    gvn_CNTBBCNBBCS_eta[j]->SetPointError(0, 0, vn.second);
+
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetPoint(0, 0.0, vncnt.first / vncnt.first);
+    err = vncnt.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vncnt.second / vncnt.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetPointError(0, 0, err);
+
+    if (j == 1)
+      cout << "v2(CNTBBCNBBCS) = " << vn.first << " +/- " << vn.second << endl;
+
+
+    // BBCN
+    vn = vn_3sub(cn[CNTBBCN][0][j],
+                 cn[BBCNBBCS][0][j],
+                 cn[CNTBBCS][0][j] );
+
+    gvn_CNTBBCNBBCS_eta[j]->SetPoint(1, 3.25, vn.first);
+    gvn_CNTBBCNBBCS_eta[j]->SetPointError(1, 0, vn.second);
+
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetPoint(1, 3.25, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetPointError(1, 0, err);
+
+    // BBCS
+    vn = vn_3sub(cn[CNTBBCS][0][j],
+                 cn[BBCNBBCS][0][j],
+                 cn[CNTBBCN][0][j] );
+
+    gvn_CNTBBCNBBCS_eta[j]->SetPoint(2, -3.25, vn.first);
+    gvn_CNTBBCNBBCS_eta[j]->SetPointError(2, 0, vn.second);
+
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetPoint(2, -3.25, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTBBCNBBCS_eta[j]->SetPointError(2, 0, err);
+
+
+
+
+
+    //-- CNTFVTXNBBCS
+    gvn_CNTFVTXNBBCS_eta[j] = new TGraphErrors();
+    gvn_CNTFVTXNBBCS_eta[j]->SetName(Form("gvn_CNTFVTXNBBCS_eta_%i", j));
+    gvn_CNTFVTXNBBCS_eta[j]->SetMarkerStyle(kFullDiamond);
+    gvn_CNTFVTXNBBCS_eta[j]->SetMarkerColor(kGreen + 2);
+    gvn_CNTFVTXNBBCS_eta[j]->SetLineColor(kGreen + 2);
+    gvn_CNTFVTXNBBCS_eta[j]->SetMinimum(100);
+
+    gvn_cntrat_CNTFVTXNBBCS_eta[j] = new TGraphErrors();
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetName(Form("gvn_cntrat_CNTFVTXNBBCS_eta_%i", j));
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetMarkerStyle(kFullDiamond);
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetMarkerColor(kGreen + 2);
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetLineColor(kGreen + 2);
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetMinimum(100);
+
+    // CNT
+    vncnt = vn_3sub(cn[CNTFVTXN][0][j],
+                    cn[CNTBBCS][0][j],
+                    cn[FVTXNBBCS][0][j] );
+    gvn_CNTFVTXNBBCS_eta[j]->SetPoint(0, 0, vncnt.first);
+    gvn_CNTFVTXNBBCS_eta[j]->SetPointError(0, 0, vncnt.second);
+
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetPoint(0, 0, vncnt.first / vncnt.first);
+    err = vncnt.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vncnt.second / vncnt.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetPointError(0, 0, err);
+
+    if (j == 1)
+      cout << "v2(CNTFVTXNBBCS) = " << vn.first << " +/- " << vn.second << endl;
+
+
+    // FVTXN
+    vn = vn_3sub(cn[CNTFVTXN][0][j],
+                 cn[FVTXNBBCS][0][j],
+                 cn[CNTBBCS][0][j] );
+    gvn_CNTFVTXNBBCS_eta[j]->SetPoint(1, 2.0, vn.first);
+    gvn_CNTFVTXNBBCS_eta[j]->SetPointError(1, 0, vn.second);
+
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetPoint(1, 2.0, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetPointError(1, 0, err);
+
+
+    // BBCS
+    vn = vn_3sub(cn[CNTBBCS][0][j],
+                 cn[FVTXNBBCS][0][j],
+                 cn[CNTFVTXN][0][j] );
+    gvn_CNTFVTXNBBCS_eta[j]->SetPoint(2, -3.25, vn.first);
+    gvn_CNTFVTXNBBCS_eta[j]->SetPointError(2, 0, vn.second);
+
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetPoint(2, -3.25, vn.first / vncnt.first);
+    err = vn.first / vncnt.first * TMath::Sqrt(
+            TMath::Power(vn.second / vn.first, 2) +
+            TMath::Power(vncnt.second / vncnt.first, 2));
+    gvn_cntrat_CNTFVTXNBBCS_eta[j]->SetPointError(2, 0, err);
+
+
+
+    //-- FVTXNFVTXSBBCS
+    gvn_FVTXNFVTXSBBCS_eta[j] = new TGraphErrors();
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetName(Form("gvn_FVTXNFVTXSBBCS_eta_%i", j));
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetMarkerStyle(kFullCross);
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetMarkerColor(kViolet - 2);
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetLineColor(kViolet - 2);
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetMinimum(100);
+
+    // FVTXN
+    vn = vn_3sub(cn[FVTXNFVTXS][0][j],
+                 cn[FVTXNBBCS][0][j],
+                 cn[BBCSFVTXS][0][j] );
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetPoint(0, 2.0, vn.first);
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetPointError(0, 0, vn.second);
+
+
+    // FVTXS
+    vn = vn_3sub(cn[FVTXNFVTXS][0][j],
+                 cn[BBCSFVTXS][0][j],
+                 cn[FVTXNBBCS][0][j] );
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetPoint(1, -2.0, vn.first);
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetPointError(1, 0, vn.second);
+
+
+    // BBCS
+    vn = vn_3sub(cn[BBCSFVTXS][0][j],
+                 cn[FVTXNBBCS][0][j],
+                 cn[FVTXNFVTXS][0][j] );
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetPoint(2, -3.25, vn.first);
+    gvn_FVTXNFVTXSBBCS_eta[j]->SetPointError(2, 0, vn.second);
+
+
+    //-- BBCNBBCSFVTXS
+    gvn_BBCNBBCSFVTXS_eta[j] = new TGraphErrors();
+    gvn_BBCNBBCSFVTXS_eta[j]->SetName(Form("gvn_BBCNBBCSFVTXS_eta_%i", j));
+    gvn_BBCNBBCSFVTXS_eta[j]->SetMarkerStyle(kOpenCross);
+    gvn_BBCNBBCSFVTXS_eta[j]->SetMarkerColor(kCyan + 2);
+    gvn_BBCNBBCSFVTXS_eta[j]->SetLineColor(kCyan + 2);
+    gvn_BBCNBBCSFVTXS_eta[j]->SetMinimum(100);
+
+    // BBCN
+    vn = vn_3sub(cn[BBCNBBCS][0][j],
+                 cn[BBCNFVTXS][0][j],
+                 cn[BBCSFVTXS][0][j] );
+
+    gvn_BBCNBBCSFVTXS_eta[j]->SetPoint(0, 3.25, vn.first);
+    gvn_BBCNBBCSFVTXS_eta[j]->SetPointError(0, 0, vn.second);
+
+
+    // BBCS
+    vn = vn_3sub(cn[BBCNBBCS][0][j],
+                 cn[BBCSFVTXS][0][j],
+                 cn[BBCNFVTXS][0][j] );
+
+    gvn_BBCNBBCSFVTXS_eta[j]->SetPoint(1, -3.25, vn.first);
+    gvn_BBCNBBCSFVTXS_eta[j]->SetPointError(1, 0, vn.second);
+
+
+    // FVTXS
+    vn = vn_3sub(cn[BBCSFVTXS][0][j],
+                 cn[BBCNFVTXS][0][j],
+                 cn[BBCNBBCS][0][j] );
+
+    gvn_BBCNBBCSFVTXS_eta[j]->SetPoint(2, -2.0, vn.first);
+    gvn_BBCNBBCSFVTXS_eta[j]->SetPointError(2, 0, vn.second);
+
+
+
+
+
   } // j
 
   //==========================================================================//
@@ -1557,18 +2173,18 @@ void plot_corrfuncs()
     }
 
 
-    gv2fitrat_CNTFVTXSBBCN =
-      (TGraphErrors*) gvn_CNTFVTXSBBCN_pT[0][1]->Clone(
-        "gv2fitrat_CNTFVTXSBBCN");
-    for (int i = 0; i < gv2fitrat_CNTFVTXSBBCN->GetN(); i++)
-    {
-      gv2fitrat_CNTFVTXSBBCN->GetPoint(i, x, y);
-      y = y / fpol->Eval(x);
-      double ey = gv2fitrat_CNTFVTXSBBCN->GetErrorY(i) / fpol->Eval(x);
+    // gv2fitrat_CNTFVTXSBBCN =
+    //   (TGraphErrors*) gvn_CNTFVTXSBBCN_pT[0][1]->Clone(
+    //     "gv2fitrat_CNTFVTXSBBCN");
+    // for (int i = 0; i < gv2fitrat_CNTFVTXSBBCN->GetN(); i++)
+    // {
+    //   gv2fitrat_CNTFVTXSBBCN->GetPoint(i, x, y);
+    //   y = y / fpol->Eval(x);
+    //   double ey = gv2fitrat_CNTFVTXSBBCN->GetErrorY(i) / fpol->Eval(x);
 
-      gv2fitrat_CNTFVTXSBBCN->SetPoint(i, x, y);
-      gv2fitrat_CNTFVTXSBBCN->SetPointError(i, 0, ey);
-    }
+    //   gv2fitrat_CNTFVTXSBBCN->SetPoint(i, x, y);
+    //   gv2fitrat_CNTFVTXSBBCN->SetPointError(i, 0, ey);
+    // }
 
     gv2fitrat_CNTBBCSFVTXN =
       (TGraphErrors*) gvn_CNTBBCSFVTXN_pT[0][1]->Clone(
@@ -1595,6 +2211,20 @@ void plot_corrfuncs()
       gv2fitrat_CNTBBCSBBCN->SetPoint(i, x, y);
       gv2fitrat_CNTBBCSBBCN->SetPointError(i, 0, ey);
     }
+
+    gv2fitrat_CNTBBCNFVTXN =
+      (TGraphErrors*) gvn_CNTBBCNFVTXN_pT[0][1]->Clone(
+        "gv2fitrat_CNTBBCNFVTXN");
+    for (int i = 0; i < gv2fitrat_CNTBBCNFVTXN->GetN(); i++)
+    {
+      gv2fitrat_CNTBBCNFVTXN->GetPoint(i, x, y);
+      y = y / fpol->Eval(x);
+      double ey = gv2fitrat_CNTBBCNFVTXN->GetErrorY(i) / fpol->Eval(x);
+
+      gv2fitrat_CNTBBCNFVTXN->SetPoint(i, x, y);
+      gv2fitrat_CNTBBCNFVTXN->SetPointError(i, 0, ey);
+    }
+
 
 
 
@@ -1639,9 +2269,10 @@ void plot_corrfuncs()
   leg3sub->SetBorderSize(0);
   leg3sub->AddEntry(gvn_CNTFVTXSFVTXN_pT[0][0], "CNT--FVTXN--FVTXS", "P");
   leg3sub->AddEntry(gvn_CNTBBCSFVTXN_pT[0][0], "CNT--FVTXN--BBCS", "P");
-  leg3sub->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "CNT--BBCN--FVTXS", "P");
+  // leg3sub->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "CNT--BBCN--FVTXS", "P");
   leg3sub->AddEntry(gvn_CNTBBCSBBCN_pT[0][0], "CNT--BBCN--BBCS", "P");
   leg3sub->AddEntry(gvn_CNTBBCSFVTXS_pT[0][0], "CNT--BBCS--FVTXS", "P");
+  leg3sub->AddEntry(gvn_CNTBBCNFVTXN_pT[0][0], "CNT--BBCN--FVTXN", "P");
 
 
   TLegend *legv2 = new TLegend(0.15, 0.6, 0.6, 0.88);
@@ -1651,12 +2282,29 @@ void plot_corrfuncs()
   legv2->AddEntry(gvn_CNTBBCSFVTXN_pT[0][0], "3 sub-event CNT-FVTXN-BBCS", "P");
   if (energy == 200)
   {
-    legv2->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "3 sub-event CNT-BBCN-FVTXS", "P");
+    //   legv2->AddEntry(gvn_CNTFVTXSBBCN_pT[0][0], "3 sub-event CNT-BBCN-FVTXS", "P");
     legv2->AddEntry(gvn_CNTBBCSBBCN_pT[0][0], "3 sub-event CNT-BBCN-BBCS", "P");
   }
   legv2->AddEntry(gvn_CNTBBCSFVTXS_pT[0][0], "3 sub-event CNT-BBCS-FVTXS", "P");
+  legv2->AddEntry(gvn_CNTBBCNFVTXN_pT[0][0], "3 sub-event CNT-BBCN-FVTXN", "P");
   if (energy > 20)
     legv2->AddEntry(gv2_Ron, "FVTXS EP (Ron)", "P");
+
+
+
+  TLegend *legv2eta = new TLegend(0.15, 0.6, 0.6, 0.88);
+  legv2eta->SetFillStyle(0);
+  legv2eta->SetBorderSize(0);
+  legv2eta->AddEntry(gvn_CNTFVTXNFVTXS_eta[1], "CNT-FVTXN-FVTXS", "P");
+  legv2eta->AddEntry(gvn_CNTBBCNBBCS_eta[1], "CNT-BBCN-BBCS", "P");
+  legv2eta->AddEntry(gvn_CNTBBCSFVTXS_eta[1], "CNT-BBCS-FVTXS", "P");
+  legv2eta->AddEntry(gvn_CNTBBCNFVTXN_eta[1], "CNT-BBCN-FVTXN", "P");
+  legv2eta->AddEntry(gvn_CNTFVTXNBBCS_eta[1], "CNT-FVTXN-BBCS", "P");
+  legv2eta->AddEntry(gvn_FVTXNFVTXSBBCS_eta[1], "FVTXN-FVTXS-BBCS", "P");
+  legv2eta->AddEntry(gvn_BBCNBBCSFVTXS_eta[1], "BBCN-BBCS-FVTXS", "P");
+
+
+
 
 
   TH1F* haxis_cncent = new TH1F("haxis_cncent", "", NCRESUM, 0, NCRESUM);
@@ -1710,6 +2358,35 @@ void plot_corrfuncs()
   haxis_ratpt->GetXaxis()->SetLabelSize(14);
 
 
+  TH1F* haxis_vneta = new TH1F("haxis_vneta", ";#eta;v_{2}", 100, -5, 5);
+  haxis_vneta->SetMinimum(0.00);
+  haxis_vneta->SetMaximum(0.14);
+  haxis_vneta->GetYaxis()->CenterTitle();
+  haxis_vneta->GetYaxis()->SetTitleFont(63);
+  haxis_vneta->GetYaxis()->SetTitleSize(20);
+  haxis_vneta->GetYaxis()->SetTitleOffset(1.7);
+  haxis_vneta->GetYaxis()->SetLabelFont(63);
+  haxis_vneta->GetYaxis()->SetLabelSize(14);
+  haxis_vneta->GetXaxis()->SetTitleFont(63);
+  haxis_vneta->GetXaxis()->SetTitleSize(20);
+  haxis_vneta->GetXaxis()->SetTitleOffset(1.7);
+  haxis_vneta->GetXaxis()->SetLabelFont(63);
+  haxis_vneta->GetXaxis()->SetLabelSize(14);
+
+  TH1F* haxis_rateta = new TH1F("haxis_rateta", ";#eta;v_{2}/v_{2}^{CNT}", 100, -5, 5);
+  haxis_rateta->SetMinimum(0.00);
+  haxis_rateta->SetMaximum(2.00);
+  haxis_rateta->GetYaxis()->CenterTitle();
+  haxis_rateta->GetYaxis()->SetTitleFont(63);
+  haxis_rateta->GetYaxis()->SetTitleSize(20);
+  haxis_rateta->GetYaxis()->SetTitleOffset(1.7);
+  haxis_rateta->GetYaxis()->SetLabelFont(63);
+  haxis_rateta->GetYaxis()->SetLabelSize(14);
+  haxis_rateta->GetXaxis()->SetTitleFont(63);
+  haxis_rateta->GetXaxis()->SetTitleSize(20);
+  haxis_rateta->GetXaxis()->SetTitleOffset(1.7);
+  haxis_rateta->GetXaxis()->SetLabelFont(63);
+  haxis_rateta->GetXaxis()->SetLabelSize(14);
 
 
   float min, max;
@@ -2179,8 +2856,9 @@ void plot_corrfuncs()
   gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("P");
   gvn_CNTBBCSFVTXN_pT[0][1]->Draw("P");
   gvn_CNTBBCSFVTXS_pT[0][1]->Draw("P");
-  gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
-  gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
+  // gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
+  // gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
+  gvn_CNTBBCNFVTXN_pT[0][1]->Draw("P");
 
   ltitle.DrawLatex(0.5, 0.95,
                    Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%",
@@ -2199,8 +2877,49 @@ void plot_corrfuncs()
   gvn_CNTFVTXSFVTXN_cent[1]->Draw("P");
   gvn_CNTBBCSFVTXS_cent[1]->Draw("P");
   gvn_CNTBBCSFVTXN_cent[1]->Draw("P");
-  gvn_CNTFVTXSBBCN_cent[1]->Draw("P");
-  gvn_CNTBBCSBBCN_cent[1]->Draw("P");
+  // gvn_CNTFVTXSBBCN_cent[1]->Draw("P");
+  // gvn_CNTBBCSBBCN_cent[1]->Draw("P");
+  gvn_CNTBBCNFVTXN_cent[1]->Draw("P");
+
+  le.DrawLatex(0.15, 0.86, Form("%.1f<p_{T}^{trig} [GeV/c]<%.1f",
+                                ptl[ptsuml], pth[ptsumh]));
+
+
+
+  TCanvas *cv3 = new TCanvas("cv3", "v3", 600, 800);
+  cv3->Divide(1, 2);
+
+  cv3->cd(1);
+  haxis_vnpt->GetYaxis()->SetRangeUser(0, 0.06);
+  haxis_vnpt->GetXaxis()->SetRangeUser(0, 5);
+  haxis_vnpt->GetYaxis()->SetTitle("v_{3}");
+  haxis_vnpt->DrawCopy();
+
+  // gvn_CNTFVTXSFVTXN_pT[0][2]->Draw("P");
+  // gvn_CNTBBCSFVTXN_pT[0][2]->Draw("P");
+  gvn_CNTBBCSFVTXS_pT[0][2]->Draw("P");
+  // gvn_CNTFVTXSBBCN_pT[0][2]->Draw("P");
+  // gvn_CNTBBCSBBCN_pT[0][2]->Draw("P");
+
+  ltitle.DrawLatex(0.5, 0.95,
+                   Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%",
+                        energy, cl[resum_icl[0]], ch[resum_ich[0]]));
+  leg3sub->Draw("same");
+
+
+
+  cv3->cd(2);
+  cv3->GetPad(2)->SetTopMargin(0.02);
+  haxis_cncent->SetMinimum(0.0);
+  haxis_cncent->SetMaximum(0.06);
+  haxis_cncent->SetTitle(";;v_{3}");
+  haxis_cncent->DrawCopy();
+
+  // gvn_CNTFVTXSFVTXN_cent[2]->Draw("P");
+  gvn_CNTBBCSFVTXS_cent[2]->Draw("P");
+  // gvn_CNTBBCSFVTXN_cent[2]->Draw("P");
+  // gvn_CNTFVTXSBBCN_cent[1]->Draw("P");
+  // gvn_CNTBBCSBBCN_cent[1]->Draw("P");
 
   le.DrawLatex(0.15, 0.86, Form("%.1f<p_{T}^{trig} [GeV/c]<%.1f",
                                 ptl[ptsuml], pth[ptsumh]));
@@ -2230,6 +2949,34 @@ void plot_corrfuncs()
 
 
 
+  TCanvas *cv2eta = new TCanvas("cv2eta", "v2 eta", 700, 900);
+  cv2eta->Divide(1, 2);
+
+  cv2eta->cd(1);
+  haxis_vneta->Draw();
+  gvn_CNTBBCSFVTXS_eta[1]->Draw("P");
+  gvn_CNTBBCNFVTXN_eta[1]->Draw("P");
+  gvn_CNTFVTXNFVTXS_eta[1]->Draw("P");
+  gvn_CNTBBCNBBCS_eta[1]->Draw("P");
+  gvn_CNTFVTXNBBCS_eta[1]->Draw("P");
+  gvn_FVTXNFVTXSBBCS_eta[1]->Draw("P");
+  gvn_BBCNBBCSFVTXS_eta[1]->Draw("P");
+
+  legv2eta->Draw("same");
+  ltitle.DrawLatex(0.5, 0.95, Form("d+Au #sqrt{s_{_{NN}}}=%i GeV %i-%i%%", energy, cl[resum_icl[0]], ch[resum_ich[0]]));
+  le.DrawLatex(0.65, 0.86, Form("%.1f<p_{T}^{trig} [GeV/c]<%.1f",
+                                ptl[ptsuml], pth[ptsumh]));
+
+  cv2eta->cd(2);
+  haxis_rateta->Draw();
+  gvn_cntrat_CNTBBCSFVTXS_eta[1]->Draw("P");
+  gvn_cntrat_CNTBBCNFVTXN_eta[1]->Draw("P");
+  gvn_cntrat_CNTFVTXNFVTXS_eta[1]->Draw("P");
+  gvn_cntrat_CNTBBCNBBCS_eta[1]->Draw("P");
+  gvn_cntrat_CNTFVTXNBBCS_eta[1]->Draw("P");
+  // gvn_cntrat_FVTXNFVTXSBBCS_eta[1]->Draw("P");
+  // gvn_cntrat_BBCNBBCSFVTXS_eta[1]->Draw("P");
+
 
 
   TCanvas *cv2ptfitrat;
@@ -2253,14 +3000,17 @@ void plot_corrfuncs()
     pv2->cd();
 
     haxis_vnpt->GetXaxis()->SetRangeUser(0, 3);
+    haxis_vnpt->GetYaxis()->SetRangeUser(0, 0.29);
+    haxis_vnpt->GetYaxis()->SetTitle("v_{2}");
     haxis_vnpt->DrawCopy();
 
     gvn_CNTFVTXSFVTXN_pT[0][1]->Draw("P");
     gvn_CNTBBCSFVTXN_pT[0][1]->Draw("P");
     gvn_CNTBBCSFVTXS_pT[0][1]->Draw("P");
+    gvn_CNTBBCNFVTXN_pT[0][1]->Draw("P");
     if (energy == 200)
     {
-      gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
+      //   gvn_CNTFVTXSBBCN_pT[0][1]->Draw("P");
       gvn_CNTBBCSBBCN_pT[0][1]->Draw("P");
     }
 
@@ -2289,9 +3039,10 @@ void plot_corrfuncs()
     gv2fitrat_CNTFVTXSFVTXN->Draw("P");
     gv2fitrat_CNTBBCSFVTXN->Draw("P");
     gv2fitrat_CNTBBCSFVTXS->Draw("P");
+    gv2fitrat_CNTBBCNFVTXN->Draw("P");
     if (energy == 200)
     {
-      gv2fitrat_CNTFVTXSBBCN->Draw("P");
+      //   gv2fitrat_CNTFVTXSBBCN->Draw("P");
       gv2fitrat_CNTBBCSBBCN->Draw("P");
     }
 
@@ -2391,6 +3142,47 @@ void plot_corrfuncs()
 
   }
 
+  //-- v2 vs pT in centrality bins
+  TCanvas* cv2ptcentbbc;
+  if ( energy == 200 )
+  {
+    cv2ptcentbbc = new TCanvas("cv2ptcentbbc", "v2 pt centrality", 800, 600);
+    cv2ptcentbbc->SetMargin(0.12, 0.02, 0.12, 0.08);
+
+    cv2ptcentbbc->cd(1);
+    haxis_vnpt->GetYaxis()->SetRangeUser(0.0, 0.49);
+    haxis_vnpt->GetXaxis()->SetRangeUser(0.1, 2.9);
+    haxis_vnpt->GetXaxis()->SetTitleOffset(1.2);
+    haxis_vnpt->GetYaxis()->SetTitleOffset(1.5);
+    haxis_vnpt->DrawCopy();
+
+    TGraphErrors *gtmp_CNTBBCSBBCN =
+      (TGraphErrors*) gvn_CNTBBCSBBCN_pT[0][1]->Clone("gtmp_CNTBBCSBBCN");
+    gtmp_CNTBBCSBBCN->SetMarkerColor(centColor[0]);
+    gtmp_CNTBBCSBBCN->SetLineColor(centColor[0]);
+    gtmp_CNTBBCSBBCN->Draw("P");
+
+
+    for (int ic = 1; ic < NCRESUM; ic++)
+    {
+      gvn_CNTBBCSBBCN_pT[ic][1]->SetMarkerColor(centColor[ic]);
+      gvn_CNTBBCSBBCN_pT[ic][1]->SetLineColor(centColor[ic]);
+      gvn_CNTBBCSBBCN_pT[ic][1]->Draw("P");
+    }
+
+    le.DrawLatex(0.2, 0.84, "3 sub-event CNT-BBCS-BBCN");
+
+    TLegend *legc = new TLegend(0.7, 0.15, 0.98, 0.45);
+    legc->SetFillStyle(0);
+    legc->SetBorderSize(0);
+    legc->AddEntry(gtmp_CNTBBCSBBCN, Form("%i--%i%%", cl[resum_icl[0]], ch[resum_ich[0]]), "P");
+    for (int ic = 1; ic < NCRESUM; ic++)
+      legc->AddEntry(gvn_CNTBBCSBBCN_pT[ic][1], Form("%i--%i%%", cl[resum_icl[ic]], ch[resum_ich[ic]]), "P");
+    legc->Draw("same");
+
+
+  }
+
   //==========================================================================//
   // PRINT PLOTS
   //==========================================================================//
@@ -2448,6 +3240,9 @@ void plot_corrfuncs()
     sprintf(cname, "pdfs/dAu%i_v2.pdf", energy);
     cv2->Print(cname);
 
+    sprintf(cname, "pdfs/dAu%i_v3.pdf", energy);
+    cv3->Print(cname);
+
     if (energy > 20)
     {
       sprintf(cname, "pdfs/dAu%i_v2pT_fitrat.pdf", energy);
@@ -2483,13 +3278,13 @@ void plot_corrfuncs()
             sprintf(hname, "dphi_corr_dAu%i_%s_c%i_pt%i", energy, cCorr[icorr], ic, ipt);
             dphi_corr_pt[icorr][ic][ipt]->Write(hname);
 
-            for (int ipar = 0; ipar < NPAR; ipar++)
-            {
-              sprintf(hname, "c%i_dAu%i_%s_c%i_pt%i", ipar, energy, cCorr[icorr], ic, ipt);
-              gcn_pt[icorr][ic][ipar]->Write(hname);
-
-            }
           } // ipt
+
+          for (int ipar = 0; ipar < NPAR; ipar++)
+          {
+            sprintf(hname, "c%i_pT_dAu%i_%s_c%i", ipar, energy, cCorr[icorr], ic);
+            gcn_pt[icorr][ic][ipar]->Write(hname);
+          }
 
         }
 
@@ -2611,7 +3406,7 @@ void plot_corrfuncs()
          << setw(10) << "$p_T$ [GeV/c]" << " & "
          << setw(10) << "$v_{2}$(CNT--FVTXN--FVTXS)" << " & "
          << setw(10) << "$v_{2}$(CNT--FVTXN--BBCS)" << " & "
-         << setw(10) << "$v_{2}$(CNT--BBCN--FVTXS)" << " & "
+         // << setw(10) << "$v_{2}$(CNT--BBCN--FVTXS)" << " & "
          << setw(10) << "$v_{2}$(CNT--BBCS--FVTXS)" << " \\\\"
          << endl;
     cout << "\\hline" << endl;
@@ -2624,7 +3419,7 @@ void plot_corrfuncs()
              << setw(10) << Form("[%.2f, %.2f]", ptl[ipt], pth[ipt]) << " & "
              << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTFVTXSFVTXN_pT[ic][1][ipt].first, vn_CNTFVTXSFVTXN_pT[ic][1][ipt].second) << " & "
              << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSFVTXN_pT[ic][1][ipt].first, vn_CNTBBCSFVTXN_pT[ic][1][ipt].second) << " & "
-             << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTFVTXSBBCN_pT[ic][1][ipt].first, vn_CNTFVTXSBBCN_pT[ic][1][ipt].second) << " & "
+             // << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTFVTXSBBCN_pT[ic][1][ipt].first, vn_CNTFVTXSBBCN_pT[ic][1][ipt].second) << " & "
              << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSFVTXS_pT[ic][1][ipt].first, vn_CNTBBCSFVTXS_pT[ic][1][ipt].second) << " \\\\ "
              << endl;
       }
@@ -2640,7 +3435,7 @@ void plot_corrfuncs()
          << setw(10) << "$p_T$ [GeV/c]" << " & "
          << setw(10) << "$v_{2}$(CNT--FVTXN--FVTXS)" << " & "
          << setw(10) << "$v_{2}$(CNT--FVTXN--BBCS)" << " & "
-         << setw(10) << "$v_{2}$(CNT--BBCN--FVTXS)" << " & "
+         // << setw(10) << "$v_{2}$(CNT--BBCN--FVTXS)" << " & "
          << setw(10) << "$v_{2}$(CNT--BBCS--FVTXS)" << " \\\\"
          << endl;
     cout << "\\hline" << endl;
@@ -2651,12 +3446,59 @@ void plot_corrfuncs()
            << setw(10) << Form("[%.2f, %.2f]", ptl[ptsuml], pth[ptsumh]) << " & "
            << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTFVTXSFVTXN_cent[ic][1].first, vn_CNTFVTXSFVTXN_cent[ic][1].second) << " & "
            << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSFVTXN_cent[ic][1].first, vn_CNTBBCSFVTXN_cent[ic][1].second) << " & "
-           << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTFVTXSBBCN_cent[ic][1].first, vn_CNTFVTXSBBCN_cent[ic][1].second) << " & "
+           // << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTFVTXSBBCN_cent[ic][1].first, vn_CNTFVTXSBBCN_cent[ic][1].second) << " & "
            << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSFVTXS_cent[ic][1].first, vn_CNTBBCSFVTXS_cent[ic][1].second) << " \\\\ "
            << endl;
     }
     cout << "\\hline" << endl;
 
+
+
+
+
+
+
+    //-- Raw v2 from 3-sub event methods, 0-5% vs pT
+    cout << endl;
+    cout << endl;
+    cout << setw(5) << "$\\sqrt{s_{_{NN}}}$" << " & "
+         << setw(10) << "Centrality" << " & "
+         << setw(10) << "$p_T$ [GeV/c]" << " & "
+         << setw(10) << "$v_{2}$(CNT--BBCS--BBCN)" << " \\\\"
+         << endl;
+    cout << "\\hline" << endl;
+    for (int ic = 0; ic < NCRESUM; ic++)
+    {
+      for (int ipt = 0; ipt < NPT; ipt++)
+      {
+        cout << setw(5) << energy << " & "
+             << setw(10) << Form("%i--%i\\%%", cl[ic], ch[ic]) << " & "
+             << setw(10) << Form("[%.2f, %.2f]", ptl[ipt], pth[ipt]) << " & "
+             << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSBBCN_pT[ic][1][ipt].first, vn_CNTBBCSBBCN_pT[ic][1][ipt].second) << " \\\\ "
+             << endl;
+      }
+      cout << "\\hline" << endl;
+    }
+
+
+    //-- Raw v2 from 3-sub event methods, pT integrated vs centrality
+    cout << endl;
+    cout << endl;
+    cout << setw(5) << "$\\sqrt{s_{_{NN}}}$" << " & "
+         << setw(10) << "Centrality" << " & "
+         << setw(10) << "$p_T$ [GeV/c]" << " & "
+         << setw(10) << "$v_{2}$(CNT--BBCS--BBCN)" << " \\\\"
+         << endl;
+    cout << "\\hline" << endl;
+    for (int ic = 0; ic < NCRESUM; ic++)
+    {
+      cout << setw(5) << energy << " & "
+           << setw(10) << Form("%i--%i\\%%", cl[ic], ch[ic]) << " & "
+           << setw(10) << Form("[%.2f, %.2f]", ptl[ptsuml], pth[ptsumh]) << " & "
+           << setw(10) << Form("%.4f$\\pm$%.4f", vn_CNTBBCSBBCN_cent[ic][1].first, vn_CNTBBCSBBCN_cent[ic][1].second) << " \\\\ "
+           << endl;
+    }
+    cout << "\\hline" << endl;
   } // if (printTables)
 
 
